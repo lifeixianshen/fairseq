@@ -53,16 +53,14 @@ def unpack_replabels(tokens, dictionary, max_reps):
     if len(tokens) == 0 or max_reps <= 0:
         return tokens
 
-    replabel_idx_to_value = {}
-    for i in range(1, max_reps + 1):
-        replabel_idx_to_value[dictionary.index(replabel_symbol(i))] = i
-
+    replabel_idx_to_value = {
+        dictionary.index(replabel_symbol(i)): i for i in range(1, max_reps + 1)
+    }
     result = []
     prev_token = -1
     for token in tokens:
         try:
-            for _ in range(replabel_idx_to_value[token]):
-                result.append(prev_token)
+            result.extend(prev_token for _ in range(replabel_idx_to_value[token]))
             prev_token = -1
         except KeyError:
             result.append(token)

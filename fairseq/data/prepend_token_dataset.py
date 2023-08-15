@@ -14,10 +14,7 @@ class PrependTokenDataset(BaseWrapperDataset):
     def __init__(self, dataset, token=None):
         super().__init__(dataset)
         self.token = token
-        if token is not None:
-            self._sizes = np.array(dataset.sizes) + 1
-        else:
-            self._sizes = dataset.sizes
+        self._sizes = dataset.sizes if token is None else np.array(dataset.sizes) + 1
 
     def __getitem__(self, idx):
         item = self.dataset[idx]

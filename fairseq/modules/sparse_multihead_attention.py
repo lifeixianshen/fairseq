@@ -35,14 +35,15 @@ class SparseMultiheadAttention(MultiheadAttention):
 
     # Used for Ai(2) calculations - beginning of [l-c, l] range
     def compute_checkpoint(self, word_index):
-        if word_index % self.stride == 0 and word_index != 0:
-            checkpoint_index = word_index - self.expressivity
-        else:
-            checkpoint_index = (
+        return (
+            word_index - self.expressivity
+            if word_index % self.stride == 0 and word_index != 0
+            else (
                 math.floor(word_index / self.stride) * self.stride
-                + self.stride - self.expressivity
+                + self.stride
+                - self.expressivity
             )
-        return checkpoint_index
+        )
 
     # Computes Ai(2)
     def compute_subset_summaries(self, absolute_max):
@@ -59,11 +60,7 @@ class SparseMultiheadAttention(MultiheadAttention):
     # Sparse Transformer Fixed Attention Pattern: https://arxiv.org/pdf/1904.10509.pdf
     def compute_fixed_attention_subset(self, word_index, tgt_len):
         # +1s account for range function; [min, max) -> [min, max]
-        if not self.is_bidirectional:
-            absolute_max = word_index + 1
-        else:
-            absolute_max = tgt_len
-
+        absolute_max = word_index + 1 if not self.is_bidirectional else tgt_len
         # Subset 1 - whole window
         rounded_index = math.floor((word_index + self.stride) / self.stride) * self.stride
         if word_index % self.stride == 0 and word_index != 0:

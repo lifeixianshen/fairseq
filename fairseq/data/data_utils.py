@@ -78,11 +78,11 @@ def load_indexed_dataset(path, dictionary, dataset_impl=None, combine=False, def
         )
         if dataset is None:
             break
-        print('| loaded {} examples from: {}'.format(len(dataset), path_k))
+        print(f'| loaded {len(dataset)} examples from: {path_k}')
         datasets.append(dataset)
         if not combine:
             break
-    if len(datasets) == 0:
+    if not datasets:
         return None
     elif len(datasets) == 1:
         return datasets[0]
@@ -97,7 +97,7 @@ def numpy_seed(seed, *addl_seeds):
     if seed is None:
         yield
         return
-    if len(addl_seeds) > 0:
+    if addl_seeds:
         seed = int(hash((seed, *addl_seeds)) % 1e6)
     state = np.random.get_state()
     np.random.seed(seed)
@@ -126,7 +126,7 @@ def collect_filtered(function, iterable, filtered):
 
 def _filter_by_size_dynamic(indices, size_fn, max_positions, raise_exception=False):
     def check_size(idx):
-        if isinstance(max_positions, float) or isinstance(max_positions, int):
+        if isinstance(max_positions, (float, int)):
             return size_fn(idx) <= max_positions
         elif isinstance(max_positions, dict):
             idx_size = size_fn(idx)
@@ -151,6 +151,7 @@ def _filter_by_size_dynamic(indices, size_fn, max_positions, raise_exception=Fal
                 a is None or b is None or a <= b
                 for a, b in zip(size_fn(idx), max_positions)
             )
+
     ignored = []
     itr = collect_filtered(check_size, indices, ignored)
     indices = np.fromiter(itr, dtype=np.int64, count=-1)
@@ -169,7 +170,7 @@ def filter_by_size(indices, dataset, max_positions, raise_exception=False):
         raise_exception (bool, optional): if ``True``, raise an exception if
             any elements are filtered (default: False).
     """
-    if isinstance(max_positions, float) or isinstance(max_positions, int):
+    if isinstance(max_positions, (float, int)):
         if hasattr(dataset, 'sizes') and isinstance(dataset.sizes, np.ndarray):
             ignored = indices[dataset.sizes[indices] > max_positions].tolist()
             indices = indices[dataset.sizes[indices] <= max_positions]
@@ -182,15 +183,13 @@ def filter_by_size(indices, dataset, max_positions, raise_exception=False):
         indices, ignored = _filter_by_size_dynamic(indices, dataset.size, max_positions)
 
     if len(ignored) > 0 and raise_exception:
-        raise Exception((
-            'Size of sample #{} is invalid (={}) since max_positions={}, '
-            'skip this example with --skip-invalid-size-inputs-valid-test'
-        ).format(ignored[0], dataset.size(ignored[0]), max_positions))
+        raise Exception(
+            f'Size of sample #{ignored[0]} is invalid (={dataset.size(ignored[0])}) since max_positions={max_positions}, skip this example with --skip-invalid-size-inputs-valid-test'
+        )
     if len(ignored) > 0:
-        print((
-            '| WARNING: {} samples have invalid sizes and will be skipped, '
-            'max_positions={}, first few sample ids={}'
-        ).format(len(ignored), max_positions, ignored[:10]))
+        print(
+            f'| WARNING: {len(ignored)} samples have invalid sizes and will be skipped, max_positions={max_positions}, first few sample ids={ignored[:10]}'
+        )
     return indices
 
 
@@ -237,5 +236,5 @@ def process_bpe_symbol(sentence: str, bpe_symbol: str):
     elif bpe_symbol == '_EOW':
         sentence = sentence.replace(' ', '').replace('_EOW', ' ').strip()
     elif bpe_symbol is not None:
-        sentence = (sentence + ' ').replace(bpe_symbol, '').rstrip()
+        sentence = f'{sentence} '.replace(bpe_symbol, '').rstrip()
     return sentence

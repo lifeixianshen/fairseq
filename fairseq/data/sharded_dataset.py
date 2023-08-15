@@ -32,14 +32,14 @@ class ShardedDataset(BaseWrapperDataset):
         self._name = name if name is not None else os.path.basename(path)
         num_shards = 0
         for i in itertools.count():
-            if not os.path.exists(os.path.join(path, "shard" + str(i))):
+            if not os.path.exists(os.path.join(path, f"shard{str(i)}")):
                 break
             num_shards += 1
 
         if num_shards > 0 and split == "train":
             random.seed(seed ^ epoch)
             shard = random.randint(0, num_shards - 1)
-            split_path = os.path.join(path, "shard" + str(shard), split)
+            split_path = os.path.join(path, f"shard{shard}", split)
         else:
             split_path = os.path.join(path, split)
             if os.path.isdir(split_path):
@@ -49,9 +49,7 @@ class ShardedDataset(BaseWrapperDataset):
             split_path, dictionary, dataset_impl, combine=combine
         )
         if dataset is None:
-            raise FileNotFoundError(
-                "Dataset not found: {} ({})".format(split, split_path)
-            )
+            raise FileNotFoundError(f"Dataset not found: {split} ({split_path})")
 
         super().__init__(dataset)
 

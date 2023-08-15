@@ -69,9 +69,9 @@ class SentenceRankingCriterion(FairseqCriterion):
             for i, (id, pred) in enumerate(zip(sample['id'].tolist(), preds.tolist())):
                 if targets is not None:
                     label = targets[i].item()
-                    print('{}\t{}\t{}'.format(id, pred, label), file=self.prediction_h)
+                    print(f'{id}\t{pred}\t{label}', file=self.prediction_h)
                 else:
-                    print('{}\t{}'.format(id, pred), file=self.prediction_h)
+                    print(f'{id}\t{pred}', file=self.prediction_h)
 
         logging_output = {
             'loss': utils.item(loss.data) if reduce else loss.data,

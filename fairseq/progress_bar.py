@@ -35,7 +35,7 @@ def build_progress_bar(args, iterator, epoch=None, prefix=None, default='tqdm', 
     elif args.log_format == 'tqdm':
         bar = tqdm_progress_bar(iterator, epoch, prefix)
     else:
-        raise ValueError('Unknown log format: {}'.format(args.log_format))
+        raise ValueError(f'Unknown log format: {args.log_format}')
 
     if args.tbmf_wrapper and distributed_utils.is_master(args):
         global g_tbmf_wrapper
@@ -74,7 +74,7 @@ class progress_bar(object):
         if epoch is not None:
             self.prefix += '| epoch {:03d}'.format(epoch)
         if prefix is not None:
-            self.prefix += ' | {}'.format(prefix)
+            self.prefix += f' | {prefix}'
 
     def __len__(self):
         return len(self.iterable)
@@ -97,12 +97,10 @@ class progress_bar(object):
         raise NotImplementedError
 
     def _str_commas(self, stats):
-        return ', '.join(key + '=' + stats[key].strip()
-                         for key in stats.keys())
+        return ', '.join(f'{key}={stats[key].strip()}' for key in stats.keys())
 
     def _str_pipes(self, stats):
-        return ' | '.join(key + ' ' + stats[key].strip()
-                          for key in stats.keys())
+        return ' | '.join(f'{key} {stats[key].strip()}' for key in stats.keys())
 
     def _format_stats(self, stats):
         postfix = OrderedDict(stats)
@@ -138,7 +136,7 @@ class json_progress_bar(progress_bar):
         """Print end-of-epoch stats."""
         self.stats = stats
         if tag != '':
-            self.stats = OrderedDict([(tag + '_' + k, v) for k, v in self.stats.items()])
+            self.stats = OrderedDict([(f'{tag}_{k}', v) for k, v in self.stats.items()])
         stats = self._format_stats(self.stats, epoch=self.epoch)
         print(json.dumps(stats), flush=True)
 
@@ -161,8 +159,7 @@ class noop_progress_bar(progress_bar):
         super().__init__(iterable, epoch, prefix)
 
     def __iter__(self):
-        for obj in self.iterable:
-            yield obj
+        yield from self.iterable
 
     def log(self, stats, tag='', step=None):
         """Log intermediate stats according to log_interval."""
@@ -198,7 +195,7 @@ class simple_progress_bar(progress_bar):
     def print(self, stats, tag='', step=None):
         """Print end-of-epoch stats."""
         postfix = self._str_pipes(self._format_stats(stats))
-        print('{} | {}'.format(self.prefix, postfix), flush=True)
+        print(f'{self.prefix} | {postfix}', flush=True)
 
 
 class tqdm_progress_bar(progress_bar):
@@ -219,7 +216,7 @@ class tqdm_progress_bar(progress_bar):
     def print(self, stats, tag='', step=None):
         """Print end-of-epoch stats."""
         postfix = self._str_pipes(self._format_stats(stats))
-        self.tqdm.write('{} | {}'.format(self.tqdm.desc, postfix))
+        self.tqdm.write(f'{self.tqdm.desc} | {postfix}')
 
 
 class tensorboard_log_wrapper(progress_bar):

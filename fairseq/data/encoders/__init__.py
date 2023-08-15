@@ -26,4 +26,4 @@ build_bpe, register_bpe, BPE_REGISTRY = registry.setup_registry(
 for file in os.listdir(os.path.dirname(__file__)):
     if file.endswith('.py') and not file.startswith('_'):
         module = file[:file.find('.py')]
-        importlib.import_module('fairseq.data.encoders.' + module)
+        importlib.import_module(f'fairseq.data.encoders.{module}')

@@ -186,8 +186,7 @@ class Trainer(object):
                     self.get_criterion().load_state_dict(state['criterion'], strict=True)
             except Exception:
                 raise Exception(
-                    'Cannot load model parameters from checkpoint {}; '
-                    'please ensure that the architectures match.'.format(filename)
+                    f'Cannot load model parameters from checkpoint {filename}; please ensure that the architectures match.'
                 )
 
             extra_state = state['extra_state']
@@ -201,9 +200,9 @@ class Trainer(object):
             # only reload optimizer and lr_scheduler if they match
             last_optim = self._optim_history[-1]
             assert last_optim['criterion_name'] == self.get_criterion().__class__.__name__, \
-                'Criterion does not match; please reset the optimizer (--reset-optimizer).'
+                    'Criterion does not match; please reset the optimizer (--reset-optimizer).'
             assert last_optim['optimizer_name'] == self.optimizer.__class__.__name__, \
-                'Optimizer does not match; please reset the optimizer (--reset-optimizer).'
+                    'Optimizer does not match; please reset the optimizer (--reset-optimizer).'
 
             if not reset_lr_scheduler:
                 self.lr_scheduler.load_state_dict(last_optim['lr_scheduler_state'])
@@ -213,8 +212,9 @@ class Trainer(object):
 
         if extra_state is not None:
             epoch = extra_state['train_iterator']['epoch']
-            print('| loaded checkpoint {} (epoch {} @ {} updates)'.format(
-                filename, epoch, self.get_num_updates()))
+            print(
+                f'| loaded checkpoint {filename} (epoch {epoch} @ {self.get_num_updates()} updates)'
+            )
 
             self.lr_step(epoch)
 
@@ -227,14 +227,14 @@ class Trainer(object):
                     if isinstance(meter, TimeMeter):
                         meter.reset()
         else:
-            print('| no existing checkpoint found {}'.format(filename))
+            print(f'| no existing checkpoint found {filename}')
 
         return extra_state
 
     def get_train_iterator(self, epoch, combine=True, load_dataset=True, data_selector=None):
         """Return an EpochBatchIterator over the training set for a given epoch."""
         if load_dataset:
-            print('| loading train data for epoch {}'.format(epoch))
+            print(f'| loading train data for epoch {epoch}')
             self.task.load_dataset(
                 self.args.train_subset,
                 epoch=epoch,
@@ -361,8 +361,8 @@ class Trainer(object):
             # and convert to log base 2
             all_reduce_list_tensor[2:4].div_(
                 (
-                    all_reduce_list_tensor[0:1] *
-                    torch.log(torch.cuda.DoubleTensor([2]))
+                    all_reduce_list_tensor[:1]
+                    * torch.log(torch.cuda.DoubleTensor([2]))
                 )
             )
             self._all_reduce_list = all_reduce_list_tensor.tolist()
@@ -377,7 +377,7 @@ class Trainer(object):
             ] = self._all_reduce_list
         elif self._sync_stats():
             logging_outputs, sample_sizes, ooms, prev_norms = \
-                zip(*distributed_utils.all_gather_list(
+                    zip(*distributed_utils.all_gather_list(
                     [logging_outputs, sample_sizes, ooms, self._prev_grad_norm],
                 ))
             logging_outputs = list(chain.from_iterable(logging_outputs))
@@ -403,7 +403,7 @@ class Trainer(object):
             )
             sample_size = self.task.grad_denom(sample_sizes, self.get_criterion())
 
-        if not all(k in logging_output for k in ['ntokens', 'nsentences']):
+        if any(k not in logging_output for k in ['ntokens', 'nsentences']):
             raise Exception((
                 'Please update the {}.aggregate_logging_outputs() method to '
                 'return ntokens and nsentences'
@@ -452,7 +452,7 @@ class Trainer(object):
                     not self.args.cpu):
                 torch.cuda.empty_cache()
         except OverflowError as e:
-            print('| WARNING: overflow detected, ' + str(e))
+            print(f'| WARNING: overflow detected, {str(e)}')
             self.zero_grad()
             logging_output = None
 
@@ -483,17 +483,16 @@ class Trainer(object):
                     sample, self.model, self.criterion
                 )
             except RuntimeError as e:
-                if 'out of memory' in str(e) and not raise_oom:
-                    print('| WARNING: ran out of memory, retrying batch')
-                    for p in self.model.parameters():
-                        if p.grad is not None:
-                            p.grad = None  # free some memory
-                    if self.cuda:
-                        torch.cuda.empty_cache()
-                    return self.valid_step(sample, raise_oom=True)
-                else:
+                if 'out of memory' not in str(e) or raise_oom:
                     raise e
 
+                print('| WARNING: ran out of memory, retrying batch')
+                for p in self.model.parameters():
+                    if p.grad is not None:
+                        p.grad = None  # free some memory
+                if self.cuda:
+                    torch.cuda.empty_cache()
+                return self.valid_step(sample, raise_oom=True)
             if ignore_results:
                 logging_output, sample_size = {}, 0
 
@@ -572,9 +571,7 @@ class Trainer(object):
 
     def get_meter(self, name):
         """Get a specific meter by name."""
-        if name not in self.meters:
-            return None
-        return self.meters[name]
+        return None if name not in self.meters else self.meters[name]
 
     def get_num_updates(self):
         """Get the number of parameters updates."""
@@ -593,9 +590,7 @@ class Trainer(object):
             sample = utils.move_to_cuda(sample)
 
         def apply_half(t):
-            if t.dtype is torch.float32:
-                return t.half()
-            return t
+            return t.half() if t.dtype is torch.float32 else t
 
         if self.args.fp16:
             sample = utils.apply_to_sample(apply_half, sample)

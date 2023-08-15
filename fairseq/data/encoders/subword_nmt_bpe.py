@@ -37,7 +37,7 @@ class SubwordNMTBPE(object):
                 None,
                 bpe_args.glossaries,
             )
-            self.bpe_symbol = bpe_args.separator + ' '
+            self.bpe_symbol = f'{bpe_args.separator} '
         except ImportError:
             raise ImportError('Please install subword_nmt with: pip install subword-nmt')
 
@@ -45,4 +45,4 @@ class SubwordNMTBPE(object):
         return self.bpe.process_line(x)
 
     def decode(self, x: str) -> str:
-        return (x + ' ').replace(self.bpe_symbol, '').rstrip()
+        return f'{x} '.replace(self.bpe_symbol, '').rstrip()

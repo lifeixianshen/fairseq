@@ -504,14 +504,10 @@ class LightConvEncoderLayer(nn.Module):
 
     def maybe_layer_norm(self, i, x, before=False, after=False):
         assert before ^ after
-        if after ^ self.normalize_before:
-            return self.layer_norms[i](x)
-        else:
-            return x
+        return self.layer_norms[i](x) if after ^ self.normalize_before else x
 
     def extra_repr(self):
-        return 'dropout={}, relu_dropout={}, input_dropout={}, normalize_before={}'.format(
-            self.dropout, self.relu_dropout, self.input_dropout, self.normalize_before)
+        return f'dropout={self.dropout}, relu_dropout={self.relu_dropout}, input_dropout={self.input_dropout}, normalize_before={self.normalize_before}'
 
 
 class LightConvDecoderLayer(nn.Module):
@@ -634,17 +630,13 @@ class LightConvDecoderLayer(nn.Module):
 
     def maybe_layer_norm(self, layer_norm, x, before=False, after=False):
         assert before ^ after
-        if after ^ self.normalize_before:
-            return layer_norm(x)
-        else:
-            return x
+        return layer_norm(x) if after ^ self.normalize_before else x
 
     def make_generation_fast_(self, need_attn=False, **kwargs):
         self.need_attn = need_attn
 
     def extra_repr(self):
-        return 'dropout={}, relu_dropout={}, input_dropout={}, normalize_before={}'.format(
-            self.dropout, self.relu_dropout, self.input_dropout, self.normalize_before)
+        return f'dropout={self.dropout}, relu_dropout={self.relu_dropout}, input_dropout={self.input_dropout}, normalize_before={self.normalize_before}'
 
 
 def Embedding(num_embeddings, embedding_dim, padding_idx):

@@ -122,8 +122,9 @@ class LightConvLanguageModel(FairseqLanguageModel):
         if args.tie_adaptive_weights:
             assert args.adaptive_input
             assert args.adaptive_input_factor == args.adaptive_softmax_factor
-            assert args.adaptive_softmax_cutoff == args.adaptive_input_cutoff, '{} != {}'.format(
-                args.adaptive_softmax_cutoff, args.adaptive_input_cutoff)
+            assert (
+                args.adaptive_softmax_cutoff == args.adaptive_input_cutoff
+            ), f'{args.adaptive_softmax_cutoff} != {args.adaptive_input_cutoff}'
             assert args.decoder_input_dim == args.decoder_output_dim
 
         decoder = LightConvDecoder(args, task.output_dictionary, embed_tokens, no_encoder_attn=True, final_norm=False)

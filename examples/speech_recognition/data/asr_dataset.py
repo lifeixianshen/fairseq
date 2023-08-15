@@ -63,7 +63,7 @@ class AsrDataset(FairseqDataset):
 
         path = self.aud_paths[index]
         if not os.path.exists(path):
-            raise FileNotFoundError("Audio file not found: {}".format(path))
+            raise FileNotFoundError(f"Audio file not found: {path}")
         sound, sample_rate = torchaudio.load_wav(path)
         output = kaldi.fbank(
             sound,

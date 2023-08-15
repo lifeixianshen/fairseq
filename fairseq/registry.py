@@ -33,8 +33,8 @@ def setup_registry(
         if choice is None:
             return None
         cls = REGISTRY[choice]
-        if hasattr(cls, 'build_' + registry_name):
-            builder = getattr(cls, 'build_' + registry_name)
+        if hasattr(cls, f'build_{registry_name}'):
+            builder = getattr(cls, f'build_{registry_name}')
         else:
             builder = cls
         set_defaults(args, cls)

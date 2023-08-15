@@ -96,7 +96,7 @@ class Wav2VecModel(BaseFairseqModel):
             )
             embed = feature_enc_layers[-1][0]
         else:
-            raise Exception('unknown encoder type ' + args.encoder)
+            raise Exception(f'unknown encoder type {args.encoder}')
 
         if args.offset == 'auto':
             assert args.encoder == 'cnn'
@@ -141,7 +141,7 @@ class Wav2VecModel(BaseFairseqModel):
                     TransposeLast(deconstruct_idx=0),
                 )
             else:
-                raise Exception('unknown aggregator type ' + args.aggregator)
+                raise Exception(f'unknown aggregator type {args.aggregator}')
 
             return feature_aggregator, agg_dim
 
@@ -170,8 +170,6 @@ class Wav2VecModel(BaseFairseqModel):
             self.project_features, _ = make_aggregator()
 
     def forward(self, source):
-        result = {}
-
         features = self.feature_extractor(source)
 
         x = self.dropout_feats(features)
@@ -181,10 +179,7 @@ class Wav2VecModel(BaseFairseqModel):
         if self.project_features is not None:
             features = self.project_features(features)
         x, targets = self.wav2vec_predictions(x, features)
-        result['cpc_logits'] = x
-        result['cpc_targets'] = targets
-
-        return result
+        return {'cpc_logits': x, 'cpc_targets': targets}
 
     def upgrade_state_dict_named(self, state_dict, name):
         super().upgrade_state_dict_named(state_dict, name)
@@ -194,8 +189,7 @@ class Wav2VecModel(BaseFairseqModel):
         return sys.maxsize
 
     def get_logits(self, net_output):
-        logits = net_output['cpc_logits']
-        return logits
+        return net_output['cpc_logits']
 
     def get_targets(self, sample, net_output, expand_steps=True):
         t = net_output['cpc_targets']
@@ -242,16 +236,15 @@ class Fp32LayerNorm(nn.LayerNorm):
 
 
 def norm_block(is_layer_norm, dim, affine=True):
-    if is_layer_norm:
-        mod = nn.Sequential(
+    return (
+        nn.Sequential(
             TransposeLast(),
             Fp32LayerNorm(dim, elementwise_affine=affine),
             TransposeLast(),
         )
-    else:
-        mod = Fp32GroupNorm(1, dim, affine=affine)
-
-    return mod
+        if is_layer_norm
+        else Fp32GroupNorm(1, dim, affine=affine)
+    )
 
 
 class ConvFeatureExtractionModel(nn.Module):
@@ -426,7 +419,7 @@ class Wav2VecPredictionsModel(nn.Module):
             if weights is not None:
                 weights[start:start + pos_num] = 1.
             start = end
-        assert end == predictions.numel(), '{} != {}'.format(end, predictions.numel())
+        assert end == predictions.numel(), f'{end} != {predictions.numel()}'
 
         if weights is not None:
             labels = (labels, weights)
@@ -436,8 +429,7 @@ class Wav2VecPredictionsModel(nn.Module):
 
 @register_model_architecture('wav2vec', 'wav2vec')
 def base_wav2vec_architecture(args):
-    conv_feature_layers = '[(512, 10, 5)]'
-    conv_feature_layers += ' + [(512, 8, 4)]'
+    conv_feature_layers = '[(512, 10, 5)]' + ' + [(512, 8, 4)]'
     conv_feature_layers += ' + [(512, 4, 2)] * 3'
     args.conv_feature_layers = getattr(args, 'conv_feature_layers', conv_feature_layers)
 

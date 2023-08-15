@@ -96,7 +96,7 @@ class BlockPairDataset(FairseqDataset):
             # pair sentences
             self._pair_sentences(dataset_index)
         else:
-            raise ValueError("Invalid break_mode: " + break_mode)
+            raise ValueError(f"Invalid break_mode: {break_mode}")
 
     def _pair_sentences(self, dataset_index):
         """
@@ -245,11 +245,10 @@ class BlockPairDataset(FairseqDataset):
                     front_cut_a += 1
                 else:
                     end_cut_a += 1
+            elif np.random.rand() < 0.5:
+                front_cut_b += 1
             else:
-                if np.random.rand() < 0.5:
-                    front_cut_b += 1
-                else:
-                    end_cut_b += 1
+                end_cut_b += 1
 
         # calculate ds indices as well as offsets and return
         truncated_sent_a = self._cut_sentence(sent_a, front_cut_a, end_cut_a)
@@ -273,9 +272,8 @@ class BlockPairDataset(FairseqDataset):
         while end_cut > 0:
             if self.dataset.sizes[end_ds_idx] > end_cut:
                 break
-            else:
-                end_cut -= self.dataset.sizes[end_ds_idx]
-                end_ds_idx -= 1
+            end_cut -= self.dataset.sizes[end_ds_idx]
+            end_ds_idx -= 1
         return start_ds_idx, offset, end_ds_idx, target_len
 
     def _fetch_block(self, start_ds_idx, offset, end_ds_idx, length):

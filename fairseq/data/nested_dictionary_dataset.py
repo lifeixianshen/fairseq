@@ -15,14 +15,14 @@ def _flatten(dico, prefix=None):
     """Flatten a nested dictionary."""
     new_dico = OrderedDict()
     if isinstance(dico, dict):
-        prefix = prefix + '.' if prefix is not None else ''
+        prefix = f'{prefix}.' if prefix is not None else ''
         for k, v in dico.items():
             if v is None:
                 continue
             new_dico.update(_flatten(v, prefix + k))
     elif isinstance(dico, list):
         for i, v in enumerate(dico):
-            new_dico.update(_flatten(v, prefix + '.[' + str(i) + ']'))
+            new_dico.update(_flatten(v, f'{prefix}.[{str(i)}]'))
     else:
         new_dico = OrderedDict({prefix: dico})
     return new_dico
@@ -54,7 +54,7 @@ class NestedDictionaryDataset(FairseqDataset):
         first = None
         for v in self.defn.values():
             if not isinstance(v, (FairseqDataset, torch.utils.data.Dataset, )):
-                raise ValueError('Expected Dataset but found: {}'.format(v.__class__))
+                raise ValueError(f'Expected Dataset but found: {v.__class__}')
             first = first or v
             if len(v) > 0:
                 assert len(v) == len(first), 'dataset lengths must match'

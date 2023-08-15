@@ -31,7 +31,7 @@ def main(args, init_distributed=False):
         if not fb_pathmgr_registerd:
             fb_pathmgr.register()
             fb_pathmgr_registerd = True
-    except (ModuleNotFoundError, ImportError):
+    except ImportError:
         pass
 
     assert args.max_tokens is not None or args.max_sentences is not None, \
@@ -62,19 +62,17 @@ def main(args, init_distributed=False):
     model = task.build_model(args)
     criterion = task.build_criterion(args)
     print(model)
-    print('| model {}, criterion {}'.format(args.arch, criterion.__class__.__name__))
-    print('| num. model params: {} (num. trained: {})'.format(
-        sum(p.numel() for p in model.parameters()),
-        sum(p.numel() for p in model.parameters() if p.requires_grad),
-    ))
+    print(f'| model {args.arch}, criterion {criterion.__class__.__name__}')
+    print(
+        f'| num. model params: {sum(p.numel() for p in model.parameters())} (num. trained: {sum(p.numel() for p in model.parameters() if p.requires_grad)})'
+    )
 
     # Build trainer
     trainer = Trainer(args, task, model, criterion)
-    print('| training on {} GPUs'.format(args.distributed_world_size))
-    print('| max tokens per GPU = {} and max sentences per GPU = {}'.format(
-        args.max_tokens,
-        args.max_sentences,
-    ))
+    print(f'| training on {args.distributed_world_size} GPUs')
+    print(
+        f'| max tokens per GPU = {args.max_tokens} and max sentences per GPU = {args.max_sentences}'
+    )
 
     # Load the latest checkpoint if one is available and restore the
     # corresponding train iterator
@@ -230,9 +228,11 @@ def validate(args, trainer, task, epoch_itr, subsets):
             num_workers=args.num_workers,
         ).next_epoch_itr(shuffle=False)
         progress = progress_bar.build_progress_bar(
-            args, itr, epoch_itr.epoch,
-            prefix='valid on \'{}\' subset'.format(subset),
-            no_progress_bar='simple'
+            args,
+            itr,
+            epoch_itr.epoch,
+            prefix=f"valid on \'{subset}\' subset",
+            no_progress_bar='simple',
         )
 
         # reset validation loss meters

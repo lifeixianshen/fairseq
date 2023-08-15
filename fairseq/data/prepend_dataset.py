@@ -24,5 +24,4 @@ class PrependDataset(BaseWrapperDataset):
         prepend_idx = self.prepend_getter(self.dataset, idx)
         assert isinstance(prepend_idx, int)
         src[0] = prepend_idx
-        item = tuple((src,) + item[1:]) if is_tuple else src
-        return item
+        return tuple((src,) + item[1:]) if is_tuple else src

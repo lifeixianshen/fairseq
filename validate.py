@@ -18,12 +18,12 @@ def main(args, override_args=None):
 
     if override_args is not None:
         overrides = vars(override_args)
-        overrides.update(eval(getattr(override_args, 'model_overrides', '{}')))
+        overrides |= eval(getattr(override_args, 'model_overrides', '{}'))
     else:
         overrides = None
 
     # Load ensemble
-    print('| loading model(s) from {}'.format(args.path))
+    print(f'| loading model(s) from {args.path}')
     models, model_args, task = checkpoint_utils.load_model_ensemble_and_task(
         [args.path],
         arg_overrides=overrides,
@@ -50,7 +50,7 @@ def main(args, override_args=None):
             task.load_dataset(subset, combine=False, epoch=0)
             dataset = task.dataset(subset)
         except KeyError:
-            raise Exception('Cannot find dataset: ' + subset)
+            raise Exception(f'Cannot find dataset: {subset}')
 
         # Initialize data iterator
         itr = task.get_batch_iterator(
@@ -67,9 +67,10 @@ def main(args, override_args=None):
             num_workers=args.num_workers,
         ).next_epoch_itr(shuffle=False)
         progress = progress_bar.build_progress_bar(
-            args, itr,
-            prefix='valid on \'{}\' subset'.format(subset),
-            no_progress_bar='simple'
+            args,
+            itr,
+            prefix=f"valid on \'{subset}\' subset",
+            no_progress_bar='simple',
         )
 
         log_outputs = []

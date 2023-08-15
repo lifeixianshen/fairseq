@@ -22,10 +22,7 @@ logger.setLevel(logging.DEBUG)
 
 
 def arr_to_toks(arr):
-    toks = []
-    for a in arr:
-        toks.append(Token(str(a), 0.0, 0.0))
-    return toks
+    return [Token(str(a), 0.0, 0.0) for a in arr]
 
 
 def compute_ctc_uer(logprobs, targets, input_lengths, target_lengths, blank_idx):
@@ -51,11 +48,7 @@ def compute_ctc_uer(logprobs, targets, input_lengths, target_lengths, blank_idx)
         target = targets[b][: target_lengths[b]].tolist()
         # dedup predictions
         predicted = [p[0] for p in groupby(predicted)]
-        # remove blanks
-        nonblanks = []
-        for p in predicted:
-            if p != blank_idx:
-                nonblanks.append(p)
+        nonblanks = [p for p in predicted if p != blank_idx]
         predicted = nonblanks
 
         # compute the alignment based on EditDistance
@@ -154,11 +147,10 @@ class CTCCriterion(FairseqCriterion):
 
         if self.args.sentence_avg:
             sample_size = sample["target"].size(0)
+        elif self.args.use_source_side_sample_size:
+            sample_size = torch.sum(input_lengths).item()
         else:
-            if self.args.use_source_side_sample_size:
-                sample_size = torch.sum(input_lengths).item()
-            else:
-                sample_size = sample["ntokens"]
+            sample_size = sample["ntokens"]
 
         logging_output = {
             "loss": utils.item(loss.data) if reduce else loss.data,

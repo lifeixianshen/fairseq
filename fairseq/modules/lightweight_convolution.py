@@ -61,10 +61,7 @@ class LightweightConv1d(nn.Module):
         self.weight_softmax = weight_softmax
         self.weight = nn.Parameter(torch.Tensor(num_heads, 1, kernel_size))
 
-        if bias:
-            self.bias = nn.Parameter(torch.Tensor(input_size))
-        else:
-            self.bias = None
+        self.bias = nn.Parameter(torch.Tensor(input_size)) if bias else None
         self.weight_dropout = weight_dropout
         self.reset_parameters()
 
@@ -130,11 +127,7 @@ class LightweightConv1dTBC(nn.Module):
         self.weight_softmax = weight_softmax
 
         self.weight = nn.Parameter(torch.Tensor(num_heads, 1, kernel_size))
-        if bias:
-            self.bias = nn.Parameter(torch.Tensor(input_size))
-        else:
-            self.bias = None
-
+        self.bias = nn.Parameter(torch.Tensor(input_size)) if bias else None
         self.reset_parameters()
 
         self.onnx_trace = False
@@ -151,9 +144,7 @@ class LightweightConv1dTBC(nn.Module):
             incremental_state: A dict to keep the state
             unfold: unfold the input or not. If not, we use the matrix trick instead
         '''
-        unfold = unfold or (incremental_state is not None)
-
-        if unfold:
+        if unfold := unfold or (incremental_state is not None):
             output = self._forward_unfolded(x, incremental_state)
         else:
             output = self._forward_expanded(x, incremental_state)
@@ -245,10 +236,7 @@ class LightweightConv1dTBC(nn.Module):
         return utils.set_incremental_state(self, incremental_state, 'input_buffer', new_buffer)
 
     def extra_repr(self):
-        s = '{}, kernel_size={}, padding_l={}, num_heads={}, weight_softmax={}, bias={}'.format(
-            self.input_size, self.kernel_size, self.padding_l,
-            self.num_heads, self.weight_softmax, self.bias is not None
-        )
+        s = f'{self.input_size}, kernel_size={self.kernel_size}, padding_l={self.padding_l}, num_heads={self.num_heads}, weight_softmax={self.weight_softmax}, bias={self.bias is not None}'
         if self.weight_dropout > 0.:
-            s += ', weight_dropout={}'.format(self.weight_dropout)
+            s += f', weight_dropout={self.weight_dropout}'
         return s

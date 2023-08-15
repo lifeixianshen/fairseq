@@ -253,7 +253,7 @@ class VGGTransformerEncoder(FairseqEncoder):
         self.input_dim = input_feat_per_channel
 
         if vggblock_config is not None:
-            for _, config in enumerate(vggblock_config):
+            for config in vggblock_config:
                 (
                     out_channels,
                     conv_kernel_size,
@@ -394,10 +394,9 @@ class VGGTransformerEncoder(FairseqEncoder):
             input_dim, num_heads = config[:2]
             if input_dim % num_heads != 0:
                 msg = (
-                    "ERROR in transformer config {}:".format(config)
-                    + "input dimension {} ".format(input_dim)
-                    + "not dividable by number of heads".format(num_heads)
-                )
+                    f"ERROR in transformer config {config}:"
+                    + f"input dimension {input_dim} "
+                ) + "not dividable by number of heads".format(num_heads)
                 raise ValueError(msg)
 
     def parse_transformer_context(self, transformer_context):
@@ -458,8 +457,10 @@ class VGGTransformerEncoder(FairseqEncoder):
 
         if len(transformer_sampling) != num_layers:
             raise ValueError(
-                "transformer_sampling {} does not match with the number "
-                + "of layers {}".format(transformer_sampling, num_layers)
+                (
+                    "transformer_sampling {} does not match with the number "
+                    + f"of layers {transformer_sampling}"
+                )
             )
 
         for layer, value in enumerate(transformer_sampling):
@@ -467,8 +468,7 @@ class VGGTransformerEncoder(FairseqEncoder):
                 raise ValueError("Invalid value in transformer_sampling: ")
             if value < 1:
                 raise ValueError(
-                    "{} layer's subsampling is {}.".format(layer, value)
-                    + " This is not allowed! "
+                    f"{layer} layer's subsampling is {value}. This is not allowed! "
                 )
         return transformer_sampling
 
@@ -847,19 +847,12 @@ class VGGTransformerEncoderOnly(VGGTransformerEncoder):
 
 
 def Embedding(num_embeddings, embedding_dim, padding_idx):
-    m = nn.Embedding(num_embeddings, embedding_dim, padding_idx=padding_idx)
-    # nn.init.uniform_(m.weight, -0.1, 0.1)
-    # nn.init.constant_(m.weight[padding_idx], 0)
-    return m
+    return nn.Embedding(num_embeddings, embedding_dim, padding_idx=padding_idx)
 
 
 def Linear(in_features, out_features, bias=True, dropout=0):
     """Linear layer (input: N x T x C)"""
-    m = nn.Linear(in_features, out_features, bias=bias)
-    # m.weight.data.uniform_(-0.1, 0.1)
-    # if bias:
-    #     m.bias.data.uniform_(-0.1, 0.1)
-    return m
+    return nn.Linear(in_features, out_features, bias=bias)
 
 
 def LinearizedConv1d(in_channels, out_channels, kernel_size, dropout=0, **kwargs):
@@ -872,8 +865,7 @@ def LinearizedConv1d(in_channels, out_channels, kernel_size, dropout=0, **kwargs
 
 
 def LayerNorm(embedding_dim):
-    m = nn.LayerNorm(embedding_dim)
-    return m
+    return nn.LayerNorm(embedding_dim)
 
 
 # seq2seq models

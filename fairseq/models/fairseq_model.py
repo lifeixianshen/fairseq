@@ -221,8 +221,7 @@ class FairseqEncoderDecoderModel(BaseFairseqModel):
                 - a dictionary with any model-specific outputs
         """
         encoder_out = self.encoder(src_tokens, src_lengths=src_lengths, **kwargs)
-        decoder_out = self.decoder(prev_output_tokens, encoder_out=encoder_out, **kwargs)
-        return decoder_out
+        return self.decoder(prev_output_tokens, encoder_out=encoder_out, **kwargs)
 
     def forward_decoder(self, prev_output_tokens, **kwargs):
         return self.decoder(prev_output_tokens, **kwargs)
@@ -237,8 +236,9 @@ class FairseqEncoderDecoderModel(BaseFairseqModel):
                 - a dictionary with any model-specific outputs
         """
         encoder_out = self.encoder(src_tokens, src_lengths=src_lengths, **kwargs)
-        features = self.decoder.extract_features(prev_output_tokens, encoder_out=encoder_out, **kwargs)
-        return features
+        return self.decoder.extract_features(
+            prev_output_tokens, encoder_out=encoder_out, **kwargs
+        )
 
     def output_layer(self, features, **kwargs):
         """Project features to the default output size (typically vocabulary size)."""

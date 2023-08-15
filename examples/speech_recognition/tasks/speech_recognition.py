@@ -39,7 +39,7 @@ def get_asr_dataset_from_json(data_json_path, tgt_dict):
     }
     """
     if not os.path.isfile(data_json_path):
-        raise FileNotFoundError("Dataset not found: {}".format(data_json_path))
+        raise FileNotFoundError(f"Dataset not found: {data_json_path}")
     with open(data_json_path, "rb") as f:
         data_samples = json.load(f)["utts"]
         assert len(data_samples) != 0
@@ -53,7 +53,7 @@ def get_asr_dataset_from_json(data_json_path, tgt_dict):
         speakers = []
         for s in sorted_samples:
             m = re.search("(.+?)-(.+?)-(.+?)", s[0])
-            speakers.append(m.group(1) + "_" + m.group(2))
+            speakers.append(f"{m[1]}_{m[2]}")
         frame_sizes = [s[1]["input"]["length_ms"] for s in sorted_samples]
         tgt = [
             torch.LongTensor([int(i) for i in s[1]["output"]["tokenid"].split(", ")])
@@ -87,7 +87,7 @@ class SpeechRecognitionTask(FairseqTask):
         """Setup the task (e.g., load dictionaries)."""
         dict_path = os.path.join(args.data, "dict.txt")
         if not os.path.isfile(dict_path):
-            raise FileNotFoundError("Dict not found: {}".format(dict_path))
+            raise FileNotFoundError(f"Dict not found: {dict_path}")
         tgt_dict = Dictionary.load(dict_path)
 
         if args.criterion == "ctc_loss":
@@ -96,7 +96,7 @@ class SpeechRecognitionTask(FairseqTask):
             for i in range(1, args.max_replabel + 1):
                 tgt_dict.add_symbol(replabel_symbol(i))
 
-        print("| dictionary: {} types".format(len(tgt_dict)))
+        print(f"| dictionary: {len(tgt_dict)} types")
         return cls(args, tgt_dict)
 
     def load_dataset(self, split, combine=False, **kwargs):
@@ -105,7 +105,7 @@ class SpeechRecognitionTask(FairseqTask):
         Args:
             split (str): name of the split (e.g., train, valid, test)
         """
-        data_json_path = os.path.join(self.args.data, "{}.json".format(split))
+        data_json_path = os.path.join(self.args.data, f"{split}.json")
         self.datasets[split] = get_asr_dataset_from_json(data_json_path, self.tgt_dict)
 
     def build_generator(self, args):

@@ -43,10 +43,10 @@ def _get_ins_targets(in_tokens, out_tokens, padding_idx, unk_idx):
     in_seq_len, out_seq_len = in_tokens.size(1), out_tokens.size(1)
 
     in_tokens_list = [
-        [t for t in s if t != padding_idx] for i, s in enumerate(in_tokens.tolist())
+        [t for t in s if t != padding_idx] for s in in_tokens.tolist()
     ]
     out_tokens_list = [
-        [t for t in s if t != padding_idx] for i, s in enumerate(out_tokens.tolist())
+        [t for t in s if t != padding_idx] for s in out_tokens.tolist()
     ]
 
     full_labels = libnat.suggested_ed2_path(
@@ -88,10 +88,10 @@ def _get_del_targets(in_tokens, out_tokens, padding_idx):
     out_seq_len = out_tokens.size(1)
 
     in_tokens_list = [
-        [t for t in s if t != padding_idx] for i, s in enumerate(in_tokens.tolist())
+        [t for t in s if t != padding_idx] for s in in_tokens.tolist()
     ]
     out_tokens_list = [
-        [t for t in s if t != padding_idx] for i, s in enumerate(out_tokens.tolist())
+        [t for t in s if t != padding_idx] for s in out_tokens.tolist()
     ]
 
     full_labels = libnat.suggested_ed2_path(
@@ -119,10 +119,10 @@ def _get_del_ins_targets(in_tokens, out_tokens, padding_idx):
     in_seq_len, out_seq_len = in_tokens.size(1), out_tokens.size(1)
 
     in_tokens_list = [
-        [t for t in s if t != padding_idx] for i, s in enumerate(in_tokens.tolist())
+        [t for t in s if t != padding_idx] for s in in_tokens.tolist()
     ]
     out_tokens_list = [
-        [t for t in s if t != padding_idx] for i, s in enumerate(out_tokens.tolist())
+        [t for t in s if t != padding_idx] for s in out_tokens.tolist()
     ]
 
     full_labels = libnat.suggested_ed2_path(
@@ -589,7 +589,7 @@ class LevenshteinTransformerDecoder(TracingTransformerDecoder):
         decoder_padding_mask = prev_output_tokens.eq(self.padding_idx)
         layers = self.layers if layers is None else layers
         early_exit = len(layers) if early_exit is None else early_exit
-        for _, layer in enumerate(layers[:early_exit]):
+        for layer in layers[:early_exit]:
             x, attn = layer(
                 x,
                 encoder_out[0] if encoder_out is not None else None,

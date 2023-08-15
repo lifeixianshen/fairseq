@@ -59,7 +59,7 @@ def align_bpe_to_words(roberta, bpe_tokens: torch.LongTensor, other_tokens: List
                 raise Exception('Cannot align "{}" and "{}"'.format(other_tok, bpe_tok))
             if other_tok == '':
                 break
-        assert len(bpe_indices) > 0
+        assert bpe_indices
         alignment.append(bpe_indices)
     assert len(alignment) == len(other_tokens)
 
@@ -88,8 +88,9 @@ def align_features_to_words(roberta, features, alignment):
     for bpe_indices in alignment:
         output.append(weighted_features[bpe_indices].sum(dim=0))
         largest_j = max(largest_j, *bpe_indices)
-    for j in range(largest_j + 1, len(features)):
-        output.append(weighted_features[j])
+    output.extend(
+        weighted_features[j] for j in range(largest_j + 1, len(features))
+    )
     output = torch.stack(output)
     assert torch.all(torch.abs(output.sum(dim=0) - features.sum(dim=0)) < 1e-4)
     return output

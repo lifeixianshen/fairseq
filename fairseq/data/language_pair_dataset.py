@@ -103,7 +103,7 @@ def collate(
             if check_alignment(alignment, src_len, tgt_len)
         ]
 
-        if len(alignments) > 0:
+        if alignments:
             alignments = torch.cat(alignments, dim=0)
             align_weights = compute_alignment_weights(alignments)
 

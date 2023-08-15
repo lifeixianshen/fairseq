@@ -100,10 +100,9 @@ class MaskTokensDataset(BaseWrapperDataset):
             item = self.dataset[index]
             sz = len(item)
 
-            assert self.mask_idx not in item, \
-                'Dataset contains mask_idx (={}), this is not expected!'.format(
-                    self.mask_idx,
-                )
+            assert (
+                self.mask_idx not in item
+            ), f'Dataset contains mask_idx (={self.mask_idx}), this is not expected!'
 
             if self.mask_whole_words is not None:
                 word_begins_mask = self.mask_whole_words.gather(0, item)

@@ -76,8 +76,7 @@ def base_lm_architecture(args):
 
 @register_model_architecture('fconv_lm', 'fconv_lm_dauphin_wikitext103')
 def fconv_lm_dauphin_wikitext103(args):
-    layers = '[(850, 6)] * 3'
-    layers += ' + [(850, 1)] * 1'
+    layers = '[(850, 6)] * 3' + ' + [(850, 1)] * 1'
     layers += ' + [(850, 5)] * 4'
     layers += ' + [(850, 1)] * 1'
     layers += ' + [(850, 4)] * 3'
@@ -92,8 +91,7 @@ def fconv_lm_dauphin_wikitext103(args):
 
 @register_model_architecture('fconv_lm', 'fconv_lm_dauphin_gbw')
 def fconv_lm_dauphin_gbw(args):
-    layers = '[(512, 5)]'
-    layers += ' + [(128, 1, 0), (128, 5, 0), (512, 1, 3)] * 3'
+    layers = '[(512, 5)]' + ' + [(128, 1, 0), (128, 5, 0), (512, 1, 3)] * 3'
     layers += ' + [(512, 1, 0), (512, 5, 0), (1024, 1, 3)] * 3'
     layers += ' + [(1024, 1, 0), (1024, 5, 0), (2048, 1, 3)] * 6'
     layers += ' + [(1024, 1, 0), (1024, 5, 0), (4096, 1, 3)]'

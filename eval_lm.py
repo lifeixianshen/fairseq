@@ -39,8 +39,7 @@ class WordStat(object):
         self.count += 1
 
     def __str__(self):
-        return '{}\t{}\t{}\t{}\t{}\t{}'.format(self.word, self.count, self.log_prob, self.is_bpe,
-                                               self.next_word_prob, self.count - self.missing_next_words)
+        return f'{self.word}\t{self.count}\t{self.log_prob}\t{self.is_bpe}\t{self.next_word_prob}\t{self.count - self.missing_next_words}'
 
 
 def main(parsed_args):
@@ -55,14 +54,14 @@ def main(parsed_args):
     task = tasks.setup_task(parsed_args)
 
     # Load ensemble
-    print('| loading model(s) from {}'.format(parsed_args.path))
+    print(f'| loading model(s) from {parsed_args.path}')
     models, args = checkpoint_utils.load_model_ensemble(
         parsed_args.path.split(':'),
         arg_overrides=eval(parsed_args.model_overrides),
         task=task,
     )
 
-    for arg in vars(parsed_args).keys():
+    for arg in vars(parsed_args):
         if arg not in {
             'self_target', 'future_target', 'past_target', 'tokens_per_sample',
             'output_size_dictionary', 'add_bos_token',
@@ -83,7 +82,7 @@ def main(parsed_args):
             context_window=args.context_window,
             pad_idx=task.source_dictionary.pad(),
         )
-    print('| {} {} {} examples'.format(args.data, args.gen_subset, len(dataset)))
+    print(f'| {args.data} {args.gen_subset} {len(dataset)} examples')
 
     # Optimize ensemble for generation and set the source and dest dicts on the model (required by scorer)
     for model in models:
@@ -95,7 +94,7 @@ def main(parsed_args):
 
     assert len(models) > 0
 
-    print('num. model params: {}'.format(sum(p.numel() for p in models[0].parameters())))
+    print(f'num. model params: {sum(p.numel() for p in models[0].parameters())}')
 
     itr = task.get_batch_iterator(
         dataset=dataset,
@@ -119,19 +118,18 @@ def main(parsed_args):
     if args.remove_bpe is not None:
         if args.remove_bpe == 'sentencepiece':
             raise NotImplementedError
-        else:
-            bpe_cont = args.remove_bpe.rstrip()
-            bpe_toks = set(
-                i
-                for i in range(len(task.source_dictionary))
-                if task.source_dictionary[i].endswith(bpe_cont)
-            )
+        bpe_cont = args.remove_bpe.rstrip()
+        bpe_toks = {
+            i
+            for i in range(len(task.source_dictionary))
+            if task.source_dictionary[i].endswith(bpe_cont)
+        }
         bpe_len = len(bpe_cont)
     else:
         bpe_toks = None
         bpe_len = 0
 
-    word_stats = dict()
+    word_stats = {}
 
     with progress_bar.build_progress_bar(args, itr) as t:
         wps_meter = TimeMeter()
@@ -199,11 +197,18 @@ def main(parsed_args):
                             word_stats.setdefault(w, WordStat(w, is_bpe)).add(pos_scores[i].item(), next_prob)
                             is_bpe = False
                             w = ''
-                    if args.output_word_probs:
-                        print(
-                            str(int(sample_id)) + " "
-                            + ('\t'.join('{} [{:2f}]'.format(x[0], x[1]) for x in word_prob))
+                if args.output_word_probs:
+                    print(
+                        (
+                            f"{int(sample_id)} "
+                            + (
+                                '\t'.join(
+                                    '{} [{:2f}]'.format(x[0], x[1])
+                                    for x in word_prob
+                                )
+                            )
                         )
+                    )
 
             wps_meter.update(sample['ntokens'])
             t.log({'wps': round(wps_meter.avg)})

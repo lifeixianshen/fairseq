@@ -64,11 +64,10 @@ def _get_ins_targets(in_tokens, out_tokens, padding_idx, unk_idx, vocab_size, ta
 
     with torch.cuda.device_of(in_tokens):
         in_tokens_list = [
-            [t for t in s if t != padding_idx] for i, s in enumerate(in_tokens.tolist())
+            [t for t in s if t != padding_idx] for s in in_tokens.tolist()
         ]
         out_tokens_list = [
-            [t for t in s if t != padding_idx]
-            for i, s in enumerate(out_tokens.tolist())
+            [t for t in s if t != padding_idx] for s in out_tokens.tolist()
         ]
 
     full_labels = libnat.suggested_ed2_path(

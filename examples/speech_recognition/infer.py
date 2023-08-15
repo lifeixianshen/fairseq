@@ -87,19 +87,17 @@ def process_predictions(
     for hypo in hypos[: min(len(hypos), args.nbest)]:
         hyp_pieces = tgt_dict.string(hypo["tokens"].int().cpu())
         hyp_words = sp.DecodePieces(hyp_pieces.split())
-        print(
-            "{} ({}-{})".format(hyp_pieces, speaker, id), file=res_files["hypo.units"]
-        )
-        print("{} ({}-{})".format(hyp_words, speaker, id), file=res_files["hypo.words"])
+        print(f"{hyp_pieces} ({speaker}-{id})", file=res_files["hypo.units"])
+        print(f"{hyp_words} ({speaker}-{id})", file=res_files["hypo.words"])
 
         tgt_pieces = tgt_dict.string(target_tokens)
         tgt_words = sp.DecodePieces(tgt_pieces.split())
-        print("{} ({}-{})".format(tgt_pieces, speaker, id), file=res_files["ref.units"])
-        print("{} ({}-{})".format(tgt_words, speaker, id), file=res_files["ref.words"])
+        print(f"{tgt_pieces} ({speaker}-{id})", file=res_files["ref.units"])
+        print(f"{tgt_words} ({speaker}-{id})", file=res_files["ref.words"])
         # only score top hypothesis
         if not args.quiet:
-            logger.debug("HYPO:" + hyp_words)
-            logger.debug("TARGET:" + tgt_words)
+            logger.debug(f"HYPO:{hyp_words}")
+            logger.debug(f"TARGET:{tgt_words}")
             logger.debug("___________________")
 
 
@@ -126,7 +124,7 @@ def load_models_and_criterions(filenames, arg_overrides=None, task=None):
     criterions = []
     for filename in filenames:
         if not os.path.exists(filename):
-            raise IOError("Model file not found: {}".format(filename))
+            raise IOError(f"Model file not found: {filename}")
         state = checkpoint_utils.load_checkpoint_to_cpu(filename, arg_overrides)
 
         args = state["args"]
@@ -173,18 +171,16 @@ def main(args):
     task = tasks.setup_task(args)
     task.load_dataset(args.gen_subset)
     logger.info(
-        "| {} {} {} examples".format(
-            args.data, args.gen_subset, len(task.dataset(args.gen_subset))
-        )
+        f"| {args.data} {args.gen_subset} {len(task.dataset(args.gen_subset))} examples"
     )
 
     # Set dictionary
     tgt_dict = task.target_dictionary
 
-    logger.info("| decoding with criterion {}".format(args.criterion))
+    logger.info(f"| decoding with criterion {args.criterion}")
 
     # Load ensemble
-    logger.info("| loading model(s) from {}".format(args.path))
+    logger.info(f"| loading model(s) from {args.path}")
     models, criterions, _model_args = load_models_and_criterions(
         args.path.split(":"),
         arg_overrides=eval(args.model_overrides),  # noqa
@@ -254,7 +250,7 @@ def main(args):
             1.0 / gen_timer.avg,
         )
     )
-    logger.info("| Generate {} with beam={}".format(args.gen_subset, args.beam))
+    logger.info(f"| Generate {args.gen_subset} with beam={args.beam}")
 
 
 def cli_main():

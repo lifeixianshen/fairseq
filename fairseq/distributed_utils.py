@@ -31,7 +31,6 @@ def infer_init_method(args):
         args.distributed_world_size = int(os.environ['WORLD_SIZE'])
         args.distributed_rank = int(os.environ['RANK'])
 
-    # we can determine the init method automatically for Slurm
     elif args.distributed_port > 0:
         node_list = os.environ.get('SLURM_STEP_NODELIST')
         if node_list is None:
@@ -51,7 +50,7 @@ def infer_init_method(args):
                     ntasks = int(os.environ.get('SLURM_NTASKS'))
                     nnodes = int(os.environ.get('SLURM_NNODES'))
                     assert ntasks % nnodes == 0
-                    ntasks_per_node = int(ntasks / nnodes)
+                    ntasks_per_node = ntasks // nnodes
                 if ntasks_per_node == 1:
                     assert args.distributed_world_size % nnodes == 0
                     gpus_per_node = args.distributed_world_size // nnodes
@@ -75,16 +74,20 @@ def distributed_init(args):
     if torch.distributed.is_initialized():
         warnings.warn('Distributed is already initialized, cannot initialize twice!')
     else:
-        print('| distributed init (rank {}): {}'.format(
-            args.distributed_rank, args.distributed_init_method), flush=True)
+        print(
+            f'| distributed init (rank {args.distributed_rank}): {args.distributed_init_method}',
+            flush=True,
+        )
         dist.init_process_group(
             backend=args.distributed_backend,
             init_method=args.distributed_init_method,
             world_size=args.distributed_world_size,
             rank=args.distributed_rank,
         )
-        print('| initialized host {} as rank {}'.format(
-            socket.gethostname(), args.distributed_rank), flush=True)
+        print(
+            f'| initialized host {socket.gethostname()} as rank {args.distributed_rank}',
+            flush=True,
+        )
 
         # perform a dummy all-reduce to initialize the NCCL communicator
         if torch.cuda.is_available():
@@ -156,11 +159,10 @@ def all_gather_list(data, group=None, max_size=16384):
     enc = pickle.dumps(data)
     enc_size = len(enc)
     if enc_size + 2 > max_size:
-        raise ValueError('encoded data exceeds max_size: {}'.format(enc_size + 2))
+        raise ValueError(f'encoded data exceeds max_size: {enc_size + 2}')
     assert max_size < 255*256
 
-    cpu_buffer[0] = enc_size // 255  # this encoding works for max_size < 65k
-    cpu_buffer[1] = enc_size % 255
+    cpu_buffer[0], cpu_buffer[1] = divmod(enc_size, 255)
     cpu_buffer[2 : enc_size + 2] = torch.ByteTensor(list(enc))
     start = rank * max_size
     size = enc_size + 2

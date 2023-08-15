@@ -131,14 +131,12 @@ class TokenBlockDataset(FairseqDataset):
             # *source* is shifted right by 1 (maybe left-padded with eos)
             # *past_target* is shifted right by 2 (left-padded as needed)
             if s == 0:
-                source = torch.cat([item.new([self.eos]), buffer[0 : e - 1]])
-                past_target = torch.cat(
-                    [item.new([self.pad, self.eos]), buffer[0 : e - 2]]
-                )
+                source = torch.cat([item.new([self.eos]), buffer[:e - 1]])
+                past_target = torch.cat([item.new([self.pad, self.eos]), buffer[:e - 2]])
             else:
                 source = buffer[s - 1 : e - 1]
                 if s == 1:
-                    past_target = torch.cat([item.new([self.eos]), buffer[0 : e - 2]])
+                    past_target = torch.cat([item.new([self.eos]), buffer[:e - 2]])
                 else:
                     past_target = buffer[s - 2 : e - 2]
 

@@ -17,16 +17,10 @@ class NumelDataset(BaseWrapperDataset):
 
     def __getitem__(self, index):
         item = self.dataset[index]
-        if torch.is_tensor(item):
-            return torch.numel(item)
-        else:
-            return np.size(item)
+        return torch.numel(item) if torch.is_tensor(item) else np.size(item)
 
     def __len__(self):
         return len(self.dataset)
 
     def collater(self, samples):
-        if self.reduce:
-            return sum(samples)
-        else:
-            return torch.tensor(samples)
+        return sum(samples) if self.reduce else torch.tensor(samples)

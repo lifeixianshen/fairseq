@@ -27,18 +27,15 @@ def script_skip_tensor(x: Tensor, mask):
     if x.size(0) == 0:
         return x
     res = x[mask] if x.size(0) == mask.size(0) else x[:, mask]
-    if res.numel() == 0:
-        return x
-    else:
-        return res
+    return x if res.numel() == 0 else res
 
 
 @torch.jit.script
 def script_skip_tensor_dict(x: Dict[str, Tensor], mask):
-    outputs = {}
-    for s, t in x.items():
-        outputs[s] = t[mask] if t.size(0) == mask.size(0) else t[:, mask]
-    return outputs
+    return {
+        s: t[mask] if t.size(0) == mask.size(0) else t[:, mask]
+        for s, t in x.items()
+    }
 
 
 def skip_tensors(x, mask):
@@ -74,7 +71,7 @@ def expand_2d_or_3d_tensor(x, trg_dim: int, padding_idx: int):
     if x is None:
         return None
 
-    assert x.dim() == 2 or x.dim() == 3
+    assert x.dim() in [2, 3]
     assert trg_dim >= x.size(1), (trg_dim, x.size())
     if trg_dim == x.size(1):
         return x

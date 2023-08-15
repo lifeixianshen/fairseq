@@ -11,11 +11,7 @@ def random_search(args):
     tuneable_parameters = ['lenpen', 'weight1', 'weight2', 'weight3']
     initial_params = [args.lenpen, args.weight1, args.weight2, args.weight3]
     for i, elem in enumerate(initial_params):
-        if type(elem) is not list:
-            initial_params[i] = [elem]
-        else:
-            initial_params[i] = elem
-
+        initial_params[i] = [elem] if type(elem) is not list else elem
     tune_parameters = args.tune_param.copy()
     for i in range(len(args.tune_param)):
         assert args.upper_bound[i] >= args.lower_bound[i]
@@ -27,22 +23,25 @@ def random_search(args):
     param_values += initial_params
     random.seed(args.seed)
 
-    random_params = np.array([
-        [random.uniform(args.lower_bound[i], args.upper_bound[i]) for i in range(len(args.tune_param))]
-        for k in range(args.num_trials)
-    ])
-    set_params = np.array([
-        [initial_params[i][0] for i in range(len(tuneable_parameters))]
-        for k in range(args.num_trials)
-    ])
+    random_params = np.array(
+        [
+            [
+                random.uniform(args.lower_bound[i], args.upper_bound[i])
+                for i in range(len(args.tune_param))
+            ]
+            for _ in range(args.num_trials)
+        ]
+    )
+    set_params = np.array(
+        [
+            [initial_params[i][0] for i in range(len(tuneable_parameters))]
+            for _ in range(args.num_trials)
+        ]
+    )
     random_params = np.concatenate((random_params, set_params), 1)
 
     rerank_args = vars(args).copy()
-    if args.nbest_list:
-        rerank_args['gen_subset'] = 'test'
-    else:
-        rerank_args['gen_subset'] = args.tune_subset
-
+    rerank_args['gen_subset'] = 'test' if args.nbest_list else args.tune_subset
     for k in range(len(tune_parameters)):
         rerank_args[tune_parameters[k]] = list(random_params[:, k])
 

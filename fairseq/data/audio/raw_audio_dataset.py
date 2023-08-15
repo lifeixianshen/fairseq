@@ -70,7 +70,7 @@ class RawAudioDataset(FairseqDataset):
         samples = [
             s for s in samples if s["source"] is not None and len(s["source"]) > 0
         ]
-        if len(samples) == 0:
+        if not samples:
             return {}
 
         sources = [s["source"] for s in samples]

@@ -228,10 +228,9 @@ class TracingTransformerEncoder(FairseqEncoder):
         self.layer_wise_attention = getattr(args, 'layer_wise_attention', False)
 
         self.layers = nn.ModuleList([])
-        self.layers.extend([
-            TransformerEncoderLayer(args)
-            for i in range(args.encoder_layers)
-        ])
+        self.layers.extend(
+            [TransformerEncoderLayer(args) for _ in range(args.encoder_layers)]
+        )
 
         if args.encoder_normalize_before:
             self.layer_norm = LayerNorm(embed_dim)
@@ -336,15 +335,15 @@ class TracingTransformerEncoder(FairseqEncoder):
     def upgrade_state_dict_named(self, state_dict, name):
         """Upgrade a (possibly old) state dict for new versions of fairseq."""
         if isinstance(self.embed_positions, SinusoidalPositionalEmbedding):
-            weights_key = '{}.embed_positions.weights'.format(name)
+            weights_key = f'{name}.embed_positions.weights'
             if weights_key in state_dict:
                 del state_dict[weights_key]
-            state_dict['{}.embed_positions._float_tensor'.format(name)] = torch.FloatTensor(1)
+            state_dict[f'{name}.embed_positions._float_tensor'] = torch.FloatTensor(1)
         for i in range(len(self.layers)):
             # update layer norms
-            self.layers[i].upgrade_state_dict_named(state_dict, "{}.layers.{}".format(name, i))
+            self.layers[i].upgrade_state_dict_named(state_dict, f"{name}.layers.{i}")
 
-        version_key = '{}.version'.format(name)
+        version_key = f'{name}.version'
         if utils.item(state_dict.get(version_key, torch.Tensor([1]))[0]) < 2:
             # earlier checkpoints did not normalize after the stack of layers
             self.layer_norm = None
@@ -567,14 +566,13 @@ class TracingTransformerDecoder(FairseqIncrementalDecoder):
 
     def output_layer(self, features, **kwargs):
         """Project features to the vocabulary size."""
-        if self.adaptive_softmax is None:
-            # project back to size of vocabulary
-            if self.share_input_output_embed:
-                return F.linear(features, self.embed_tokens.weight)
-            else:
-                return F.linear(features, self.embed_out)
-        else:
+        if self.adaptive_softmax is not None:
             return features
+        # project back to size of vocabulary
+        if self.share_input_output_embed:
+            return F.linear(features, self.embed_tokens.weight)
+        else:
+            return F.linear(features, self.embed_out)
 
     def max_positions(self):
         """Maximum output length supported by the decoder."""
@@ -596,10 +594,10 @@ class TracingTransformerDecoder(FairseqIncrementalDecoder):
     def upgrade_state_dict_named(self, state_dict, name):
         """Upgrade a (possibly old) state dict for new versions of fairseq."""
         if isinstance(self.embed_positions, SinusoidalPositionalEmbedding):
-            weights_key = '{}.embed_positions.weights'.format(name)
+            weights_key = f'{name}.embed_positions.weights'
             if weights_key in state_dict:
                 del state_dict[weights_key]
-            state_dict['{}.embed_positions._float_tensor'.format(name)] = torch.FloatTensor(1)
+            state_dict[f'{name}.embed_positions._float_tensor'] = torch.FloatTensor(1)
 
         for i in range(len(self.layers)):
             # update layer norms
@@ -610,12 +608,12 @@ class TracingTransformerDecoder(FairseqIncrementalDecoder):
             }
             for old, new in layer_norm_map.items():
                 for m in ('weight', 'bias'):
-                    k = '{}.layers.{}.layer_norms.{}.{}'.format(name, i, old, m)
+                    k = f'{name}.layers.{i}.layer_norms.{old}.{m}'
                     if k in state_dict:
-                        state_dict['{}.layers.{}.{}.{}'.format(name, i, new, m)] = state_dict[k]
+                        state_dict[f'{name}.layers.{i}.{new}.{m}'] = state_dict[k]
                         del state_dict[k]
 
-        version_key = '{}.version'.format(name)
+        version_key = f'{name}.version'
         if utils.item(state_dict.get(version_key, torch.Tensor([1]))[0]) <= 2:
             # earlier checkpoints did not normalize after the stack of layers
             self.layer_norm = None

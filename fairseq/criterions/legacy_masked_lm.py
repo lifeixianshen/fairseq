@@ -21,13 +21,12 @@ def compute_cross_entropy_loss(logits, targets, ignore_index=-100):
     assert logits.size(0) == targets.size(-1), \
         "Logits and Targets tensor shapes don't match up"
 
-    loss = F.nll_loss(
+    return F.nll_loss(
         F.log_softmax(logits, -1, dtype=torch.float32),
         targets,
         reduction="sum",
         ignore_index=ignore_index,
     )
-    return loss
 
 
 @register_criterion('legacy_masked_lm_loss')
@@ -135,13 +134,18 @@ class LegacyMaskedLmLoss(FairseqCriterion):
         sample_size = sum(log.get('sample_size', 0) for log in logging_outputs)
         agg_loss = sum(log.get('loss', 0) for log in logging_outputs)
 
-        agg_output = {
-            'loss': agg_loss / sample_size / math.log(2) if sample_size > 0 else 0.,
-            'lm_loss': lm_loss_sum / ntokens / math.log(2) if ntokens > 0 else 0.,
-            'sentence_loss': sentence_loss_sum / nsentences / math.log(2) if nsentences > 0 else 0.,
-            'nll_loss': lm_loss_sum / ntokens / math.log(2) if ntokens > 0 else 0.,
+        return {
+            'loss': agg_loss / sample_size / math.log(2)
+            if sample_size > 0
+            else 0.0,
+            'lm_loss': lm_loss_sum / ntokens / math.log(2) if ntokens > 0 else 0.0,
+            'sentence_loss': sentence_loss_sum / nsentences / math.log(2)
+            if nsentences > 0
+            else 0.0,
+            'nll_loss': lm_loss_sum / ntokens / math.log(2)
+            if ntokens > 0
+            else 0.0,
             'ntokens': ntokens,
             'nsentences': nsentences,
             'sample_size': sample_size,
         }
-        return agg_output

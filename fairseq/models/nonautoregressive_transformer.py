@@ -39,8 +39,7 @@ def _uniform_assignment(src_lens, trg_lens):
     # max_trg_len
     index_t = utils.new_arange(trg_lens, max_trg_len).float()
     index_t = steps[:, None] * index_t[None, :]  # batch_size X max_trg_len
-    index_t = torch.round(index_t).long().detach()
-    return index_t
+    return torch.round(index_t).long().detach()
 
 
 @register_model("nonautoregressive_transformer")
@@ -189,13 +188,11 @@ class NATransformerDecoder(TransformerDecoder):
             embedding_copy=(step == 0) & self.src_embedding_copy,
         )
 
-        if tgt_tokens is not None:
-            word_ins_mask = tgt_tokens.ne(self.padding_idx)
-            word_ins_tgt = tgt_tokens
-            return self.output_layer(features), word_ins_tgt, word_ins_mask
-
-        else:
+        if tgt_tokens is None:
             return F.log_softmax(self.output_layer(features), -1).max(-1)
+        word_ins_mask = tgt_tokens.ne(self.padding_idx)
+        word_ins_tgt = tgt_tokens
+        return self.output_layer(features), word_ins_tgt, word_ins_mask
 
     def extract_features(
         self,
@@ -301,14 +298,13 @@ class NATransformerDecoder(TransformerDecoder):
         mapped_inputs = _uniform_assignment(length_sources, length_targets).masked_fill(
             ~tgt_masks, 0
         )
-        copied_embedding = torch.gather(
+        return torch.gather(
             src_embeds,
             1,
             mapped_inputs.unsqueeze(-1).expand(
                 *mapped_inputs.size(), src_embeds.size(-1)
             ),
         )
-        return copied_embedding
 
     def forward_length_prediction(self, encoder_out, tgt_tokens=None):
         enc_feats = encoder_out["encoder_out"]  # T x B x C

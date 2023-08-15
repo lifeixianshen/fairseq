@@ -59,16 +59,16 @@ def save_checkpoint(args, trainer, epoch_itr, val_loss):
         'val_loss': val_loss,
     }
     if hasattr(save_checkpoint, 'best'):
-        extra_state.update({'best': save_checkpoint.best})
+        extra_state['best'] = save_checkpoint.best
 
     checkpoints = [os.path.join(args.save_dir, fn) for fn, cond in checkpoint_conds.items() if cond]
-    if len(checkpoints) > 0:
+    if checkpoints:
         trainer.save_checkpoint(checkpoints[0], extra_state)
         for cp in checkpoints[1:]:
             try:
                 from fairseq.fb_pathmgr import fb_pathmgr
                 fb_pathmgr.copy(checkpoints[0], cp, True)
-            except (ModuleNotFoundError, ImportError):
+            except ImportError:
                 shutil.copyfile(checkpoints[0], cp)
 
         write_timer.stop()
@@ -142,13 +142,13 @@ def load_checkpoint_to_cpu(path, arg_overrides=None):
             state = torch.load(
                 f, map_location=lambda s, l: default_restore_location(s, 'cpu'),
             )
-    except (ModuleNotFoundError, ImportError):
+    except ImportError:
         # if path manager not found, continue with local file.
         state = torch.load(
             path, map_location=lambda s, l: default_restore_location(s, 'cpu'),
         )
-    args = state['args']
     if arg_overrides is not None:
+        args = state['args']
         for arg_name, arg_val in arg_overrides.items():
             setattr(args, arg_name, arg_val)
     state = _upgrade_state_dict(state)
@@ -174,7 +174,7 @@ def load_model_ensemble_and_task(filenames, arg_overrides=None, task=None):
     ensemble = []
     for filename in filenames:
         if not os.path.exists(filename):
-            raise IOError('Model file not found: {}'.format(filename))
+            raise IOError(f'Model file not found: {filename}')
         state = load_checkpoint_to_cpu(filename, arg_overrides)
 
         args = state['args']
@@ -202,8 +202,8 @@ def checkpoint_paths(path, pattern=r'checkpoint(\d+)\.pt'):
     for i, f in enumerate(files):
         m = pt_regexp.fullmatch(f)
         if m is not None:
-            idx = int(m.group(1)) if len(m.groups()) > 0 else i
-            entries.append((idx, m.group(0)))
+            idx = int(m[1]) if len(m.groups()) > 0 else i
+            entries.append((idx, m[0]))
     return [os.path.join(path, x[1]) for x in sorted(entries, reverse=True)]
 
 
@@ -261,7 +261,7 @@ def save_state(
         from fairseq.fb_pathmgr import fb_pathmgr
         with fb_pathmgr.open(filename, "wb") as f:
             torch_persistent_save(state_dict, f)
-    except (ModuleNotFoundError, ImportError):
+    except ImportError:
         # if path manager not found, continue with local file.
         torch_persistent_save(state_dict, filename)
 
@@ -386,7 +386,7 @@ def prune_state_dict(state_dict, args):
             continue
 
         # otherwise, layer should be pruned.
-        original_layer_number = match.group(1)
+        original_layer_number = match[1]
         # figure out which mapping dict to replace from
         for pruning_pass in pruning_passes:
             if original_layer_number in pruning_pass["mapping_dict"] and pruning_pass["substitution_regex"].search(layer_name):
@@ -408,7 +408,7 @@ def load_pretrained_component_from_model(
     `checkpoint` file.
     """
     if not os.path.exists(checkpoint):
-        raise IOError('Model file not found: {}'.format(checkpoint))
+        raise IOError(f'Model file not found: {checkpoint}')
     state = load_checkpoint_to_cpu(checkpoint)
     if isinstance(component, FairseqEncoder):
         component_type = "encoder"
@@ -437,7 +437,7 @@ def verify_checkpoint_directory(save_dir: str) -> None:
         with open(temp_file_path, 'w'):
             pass
     except OSError as e:
-        print('| Unable to access checkpoint save directory: {}'.format(save_dir))
+        print(f'| Unable to access checkpoint save directory: {save_dir}')
         raise e
     else:
         os.remove(temp_file_path)

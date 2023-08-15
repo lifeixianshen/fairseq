@@ -72,12 +72,12 @@ class MaskedLMDataset(FairseqDataset):
             random_token_prob: float = 0.1
     ):
         # Make sure the input datasets are the ones supported
-        assert (
-            isinstance(dataset, TokenBlockDataset) or
-            isinstance(dataset, BlockPairDataset) or
-            isinstance(dataset, ConcatDataset)
-        ), "MaskedLMDataset only wraps TokenBlockDataset or BlockPairDataset or " \
-           "ConcatDataset"
+        assert isinstance(
+            dataset, (TokenBlockDataset, BlockPairDataset, ConcatDataset)
+        ), (
+            "MaskedLMDataset only wraps TokenBlockDataset or BlockPairDataset or "
+            "ConcatDataset"
+        )
 
         self.dataset = dataset
         self.sizes = np.array(sizes)
@@ -199,7 +199,7 @@ class MaskedLMDataset(FairseqDataset):
                accordingly.
             5. Concatenate all tensors.
         """
-        if len(samples) == 0:
+        if not samples:
             return {}
         # To ensure determinism, we reset the state of the PRNG after every
         # batch based on the seed and the first id of the batch. This ensures
@@ -254,6 +254,7 @@ class MaskedLMDataset(FairseqDataset):
             return data_utils.collate_tokens(
                 [s[key] for s in samples], pad_idx, eos_idx, left_pad=False
             )
+
         return {
             "id": torch.LongTensor([s["id"] for s in samples]),
             "ntokens": sum(len(s["source"]) for s in samples),
@@ -309,10 +310,9 @@ class MaskedLMDataset(FairseqDataset):
         """
         if self.shuffle:
             return np.random.permutation(len(self))
-        else:
-            order = [np.arange(len(self))]
-            order.append(self.sizes)
-            return np.lexsort(order)
+        order = [np.arange(len(self))]
+        order.append(self.sizes)
+        return np.lexsort(order)
 
     @property
     def supports_prefetch(self):

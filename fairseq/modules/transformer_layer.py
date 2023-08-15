@@ -58,11 +58,9 @@ class TransformerEncoderLayer(nn.Module):
         }
         for old, new in layer_norm_map.items():
             for m in ('weight', 'bias'):
-                k = '{}.layer_norms.{}.{}'.format(name, old, m)
+                k = f'{name}.layer_norms.{old}.{m}'
                 if k in state_dict:
-                    state_dict[
-                        '{}.{}.{}'.format(name, new, m)
-                    ] = state_dict[k]
+                    state_dict[f'{name}.{new}.{m}'] = state_dict[k]
                     del state_dict[k]
 
     def forward(self, x, encoder_padding_mask, attn_mask=None):
@@ -109,10 +107,7 @@ class TransformerEncoderLayer(nn.Module):
 
     def maybe_layer_norm(self, layer_norm, x, before=False, after=False):
         assert before ^ after
-        if after ^ self.normalize_before:
-            return layer_norm(x)
-        else:
-            return x
+        return layer_norm(x) if after ^ self.normalize_before else x
 
 
 class TransformerDecoderLayer(nn.Module):
@@ -225,7 +220,11 @@ class TransformerDecoderLayer(nn.Module):
                 saved_state["prev_key_padding_mask"] = prev_self_attn_state[2]
             self.self_attn._set_input_buffer(incremental_state, saved_state)
 
-        if self.cross_self_attention and not (incremental_state is not None and "prev_key" in self.self_attn._get_input_buffer(incremental_state)):
+        if self.cross_self_attention and (
+            incremental_state is None
+            or "prev_key"
+            not in self.self_attn._get_input_buffer(incremental_state)
+        ):
             if self_attn_mask is not None:
                 self_attn_mask = torch.cat((x.new(x.size(0), encoder_out.size(0)).zero_(), self_attn_mask), dim=1)
             if self_attn_padding_mask is not None:
@@ -294,10 +293,7 @@ class TransformerDecoderLayer(nn.Module):
 
     def maybe_layer_norm(self, layer_norm, x, before=False, after=False):
         assert before ^ after
-        if after ^ self.normalize_before:
-            return layer_norm(x)
-        else:
-            return x
+        return layer_norm(x) if after ^ self.normalize_before else x
 
     def make_generation_fast_(self, need_attn=False, **kwargs):
         self.need_attn = need_attn

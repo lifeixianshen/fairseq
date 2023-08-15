@@ -62,7 +62,7 @@ class CommonsenseQATask(FairseqTask):
 
         # load data and label dictionaries
         vocab = cls.load_dictionary(os.path.join(args.data, 'dict.txt'))
-        print('| dictionary: {} types'.format(len(vocab)))
+        print(f'| dictionary: {len(vocab)} types')
 
         return cls(args, vocab)
 
@@ -84,7 +84,7 @@ class CommonsenseQATask(FairseqTask):
             return tokens
 
         if data_path is None:
-            data_path = os.path.join(self.args.data, split + '.jsonl')
+            data_path = os.path.join(self.args.data, f'{split}.jsonl')
         if not os.path.exists(data_path):
             raise FileNotFoundError('Cannot find data: {}'.format(data_path))
 
@@ -101,7 +101,7 @@ class CommonsenseQATask(FairseqTask):
                 question = example['question']['stem']
                 assert len(example['question']['choices']) == self.args.num_classes
                 # format: `<s> Q: Where would I not want a fox? </s> A: hen house </s>`
-                question = 'Q: ' + question
+                question = f'Q: {question}'
                 question_toks = binarize(question, append_bos=True)
                 for i, choice in enumerate(example['question']['choices']):
                     src = 'A: ' + choice['text']
@@ -110,7 +110,7 @@ class CommonsenseQATask(FairseqTask):
                     src_lengths[i].append(len(src_bin))
         assert all(len(src_tokens[0]) == len(src_tokens[i]) for i in range(self.args.num_classes))
         assert len(src_tokens[0]) == len(src_lengths[0])
-        assert len(labels) == 0 or len(labels) == len(src_tokens[0])
+        assert len(labels) in [0, len(src_tokens[0])]
 
         for i in range(self.args.num_classes):
             src_lengths[i] = np.array(src_lengths[i])
@@ -124,18 +124,16 @@ class CommonsenseQATask(FairseqTask):
         }
 
         for i in range(self.args.num_classes):
-            dataset.update({
-                'net_input{}'.format(i + 1): {
-                    'src_tokens': RightPadDataset(
-                        src_tokens[i],
-                        pad_idx=self.source_dictionary.pad(),
-                    ),
-                    'src_lengths': src_lengths[i],
-                }
-            })
+            dataset['net_input{}'.format(i + 1)] = {
+                'src_tokens': RightPadDataset(
+                    src_tokens[i],
+                    pad_idx=self.source_dictionary.pad(),
+                ),
+                'src_lengths': src_lengths[i],
+            }
 
-        if len(labels) > 0:
-            dataset.update({'target': RawLabelDataset(labels)})
+        if labels:
+            dataset['target'] = RawLabelDataset(labels)
 
         dataset = NestedDictionaryDataset(
             dataset,

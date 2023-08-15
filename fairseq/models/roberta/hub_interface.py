@@ -54,10 +54,10 @@ class RobertaHubInterface(nn.Module):
             >>> roberta.encode('world').tolist()
             [0, 8331, 2]
         """
-        bpe_sentence = '<s> ' + self.bpe.encode(sentence) + ' </s>'
+        bpe_sentence = f'<s> {self.bpe.encode(sentence)} </s>'
         for s in addl_sentences:
             bpe_sentence += (' </s>' if not no_separator else '')
-            bpe_sentence += ' ' + self.bpe.encode(s) + ' </s>'
+            bpe_sentence += f' {self.bpe.encode(s)} </s>'
         tokens = self.task.source_dictionary.encode_line(bpe_sentence, append_eos=False)
         return tokens.long()
 
@@ -70,28 +70,25 @@ class RobertaHubInterface(nn.Module):
         doc_mask = eos_mask[1:] & eos_mask[:-1]
         sentences = np.split(tokens, doc_mask.nonzero()[0] + 1)
         sentences = [self.bpe.decode(self.task.source_dictionary.string(s)) for s in sentences]
-        if len(sentences) == 1:
-            return sentences[0]
-        return sentences
+        return sentences[0] if len(sentences) == 1 else sentences
 
     def extract_features(self, tokens: torch.LongTensor, return_all_hiddens: bool = False) -> torch.Tensor:
         if tokens.dim() == 1:
             tokens = tokens.unsqueeze(0)
         if tokens.size(-1) > self.model.max_positions():
-            raise ValueError('tokens exceeds maximum length: {} > {}'.format(
-                tokens.size(-1), self.model.max_positions()
-            ))
+            raise ValueError(
+                f'tokens exceeds maximum length: {tokens.size(-1)} > {self.model.max_positions()}'
+            )
         features, extra = self.model(
             tokens.to(device=self.device),
             features_only=True,
             return_all_hiddens=return_all_hiddens,
         )
-        if return_all_hiddens:
-            # convert from T x B x C -> B x T x C
-            inner_states = extra['inner_states']
-            return [inner_state.transpose(0, 1) for inner_state in inner_states]
-        else:
+        if not return_all_hiddens:
             return features  # just the last layer's features
+        # convert from T x B x C -> B x T x C
+        inner_states = extra['inner_states']
+        return [inner_state.transpose(0, 1) for inner_state in inner_states]
 
     def register_classification_head(
         self, name: str, num_classes: int = None, embedding_size: int = None, **kwargs
@@ -103,9 +100,7 @@ class RobertaHubInterface(nn.Module):
     def predict(self, head: str, tokens: torch.LongTensor, return_logits: bool = False):
         features = self.extract_features(tokens.to(device=self.device))
         logits = self.model.classification_heads[head](features)
-        if return_logits:
-            return logits
-        return F.log_softmax(logits, dim=-1)
+        return logits if return_logits else F.log_softmax(logits, dim=-1)
 
     def extract_features_aligned_to_words(self, sentence: str, return_all_hiddens: bool = False) -> torch.Tensor:
         """Extract RoBERTa features, aligned to spaCy's word-level tokenizer."""
@@ -139,15 +134,14 @@ class RobertaHubInterface(nn.Module):
     def fill_mask(self, masked_input: str, topk: int = 5):
         masked_token = '<mask>'
         assert masked_token in masked_input and masked_input.count(masked_token) == 1, \
-            "Please add one {0} token for the input, eg: 'He is a {0} guy'".format(masked_token)
+                "Please add one {0} token for the input, eg: 'He is a {0} guy'".format(masked_token)
 
         text_spans = masked_input.split(masked_token)
         text_spans_bpe = (' {0} '.format(masked_token)).join(
             [self.bpe.encode(text_span.rstrip()) for text_span in text_spans]
         ).strip()
         tokens = self.task.source_dictionary.encode_line(
-            '<s> ' + text_spans_bpe,
-            append_eos=True,
+            f'<s> {text_spans_bpe}', append_eos=True
         )
 
         masked_index = (tokens == self.task.mask_idx).nonzero()

@@ -90,14 +90,13 @@ class ResamplingDataset(BaseWrapperDataset):
         return self.dataset.size(self._cur_indices.array[index])
 
     def ordered_indices(self):
-        if self.batch_by_size:
-            order = [
-                np.arange(len(self)),
-                self.sizes,
-            ]  # No need to handle `self.shuffle == True`
-            return np.lexsort(order)
-        else:
+        if not self.batch_by_size:
             return np.arange(len(self))
+        order = [
+            np.arange(len(self)),
+            self.sizes,
+        ]  # No need to handle `self.shuffle == True`
+        return np.lexsort(order)
 
     def prefetch(self, indices):
         self.dataset.prefetch(self._cur_indices.array[indices])

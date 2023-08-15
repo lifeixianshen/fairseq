@@ -41,7 +41,7 @@ class MultiCorpusSampledDataset(FairseqDataset):
         self.sampling_func = sampling_func
 
         self.total_num_instances = 0
-        for _, dataset in datasets.items():
+        for dataset in datasets.values():
             assert isinstance(dataset, FairseqDataset)
             self.total_num_instances += dataset.__len__()
 
@@ -102,7 +102,7 @@ class MultiCorpusSampledDataset(FairseqDataset):
             1. Select a dataset using the specified probability distribution.
             2. Call the collater function of the selected dataset.
         """
-        if len(samples) == 0:
+        if not samples:
             return None
 
         selected_key = self.sampling_func(list(self.datasets.keys()))

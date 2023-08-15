@@ -88,7 +88,7 @@ def parse_args_and_arch(parser, input_args=None, parse_known=False, suppress_def
             suppress_defaults=False,
         )
         suppressed_parser = argparse.ArgumentParser(add_help=False, parents=[parser])
-        suppressed_parser.set_defaults(**{k: None for k, v in vars(args).items()})
+        suppressed_parser.set_defaults(**{k: None for k in vars(args)})
         args = suppressed_parser.parse_args(input_args)
         return argparse.Namespace(**{
             k: v
@@ -149,10 +149,7 @@ def parse_args_and_arch(parser, input_args=None, parse_known=False, suppress_def
     if hasattr(args, 'arch'):
         ARCH_CONFIG_REGISTRY[args.arch](args)
 
-    if parse_known:
-        return args, extra
-    else:
-        return args
+    return (args, extra) if parse_known else args
 
 
 def get_parser(desc, default_task='translation'):

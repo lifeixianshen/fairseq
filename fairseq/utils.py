@@ -71,7 +71,7 @@ def _get_full_incremental_state_key(module_instance, key):
         INCREMENTAL_STATE_INSTANCE_ID[module_name] += 1
         module_instance._fairseq_instance_id = INCREMENTAL_STATE_INSTANCE_ID[module_name]
 
-    return '{}.{}.{}'.format(module_name, module_instance._fairseq_instance_id, key)
+    return f'{module_name}.{module_instance._fairseq_instance_id}.{key}'
 
 
 def get_incremental_state(module, incremental_state, key):
@@ -110,7 +110,7 @@ def print_embed_overlap(embed_dict, vocab_dict):
     embed_keys = set(embed_dict.keys())
     vocab_keys = set(vocab_dict.symbols)
     overlap = len(embed_keys & vocab_keys)
-    print("| Found {}/{} types in embedding file.".format(overlap, len(vocab_dict)))
+    print(f"| Found {overlap}/{len(vocab_dict)} types in embedding file.")
 
 
 def parse_embedding(embed_path):
@@ -218,9 +218,7 @@ def convert_padding_direction(src_tokens, padding_idx, right_to_left=False, left
 def item(tensor):
     if hasattr(tensor, 'item'):
         return tensor.item()
-    if hasattr(tensor, '__getitem__'):
-        return tensor[0]
-    return tensor
+    return tensor[0] if hasattr(tensor, '__getitem__') else tensor
 
 
 def clip_grad_norm_(tensor, max_norm):
@@ -262,7 +260,7 @@ def resolve_max_positions(*args):
         if max_positions is None:
             max_positions = arg
         elif arg is not None:
-            if isinstance(arg, float) or isinstance(arg, int):
+            if isinstance(arg, (float, int)):
                 max_positions = min(max_positions, arg)
             elif isinstance(arg, dict):
                 max_positions = map_value_update(max_positions, arg)
@@ -318,21 +316,21 @@ def deprecation_warning(message, stacklevel=3):
 
 def get_activation_fn(activation: str) -> Callable:
     """ Returns the activation function corresponding to `activation` """
-    if activation == 'relu':
-        return F.relu
-    elif activation == 'gelu':
+    if activation == 'gelu':
         return gelu
+    elif activation == 'gelu_accurate':
+        return gelu_accurate
     elif activation == 'gelu_fast':
         deprecation_warning('--activation-fn=gelu_fast has been renamed to gelu_accurate')
         return gelu_accurate
-    elif activation == 'gelu_accurate':
-        return gelu_accurate
-    elif activation == 'tanh':
-        return torch.tanh
     elif activation == 'linear':
         return lambda x: x
+    elif activation == 'relu':
+        return F.relu
+    elif activation == 'tanh':
+        return torch.tanh
     else:
-        raise RuntimeError("--activation-fn {} not supported".format(activation))
+        raise RuntimeError(f"--activation-fn {activation} not supported")
 
 
 def get_available_activation_fns() -> List:
@@ -395,8 +393,7 @@ def get_token_to_word_mapping(tokens, exclude_list):
     n = len(tokens)
     word_start = [int(token not in exclude_list) for token in tokens]
     word_idx = list(accumulate(word_start))
-    token_to_word = {i: word_idx[i] for i in range(n)}
-    return token_to_word
+    return {i: word_idx[i] for i in range(n)}
 
 
 def extract_hard_alignment(attn, src_sent, tgt_sent, pad, eos):
@@ -409,8 +406,13 @@ def extract_hard_alignment(attn, src_sent, tgt_sent, pad, eos):
         attn_valid = attn[tgt_valid]
         attn_valid[:, src_invalid] = float('-inf')
         _, src_indices = attn_valid.max(dim=1)
-        for tgt_idx, src_idx in zip(tgt_valid, src_indices):
-            alignment.append((src_token_to_word[src_idx.item()] - 1, tgt_token_to_word[tgt_idx.item()] - 1))
+        alignment.extend(
+            (
+                src_token_to_word[src_idx.item()] - 1,
+                tgt_token_to_word[tgt_idx.item()] - 1,
+            )
+            for tgt_idx, src_idx in zip(tgt_valid, src_indices)
+        )
     return alignment
 
 
@@ -419,6 +421,6 @@ def new_arange(x, *size):
     Return a Tensor of `size` filled with a range function on the device of x.
     If size is empty, using the size of the variable x.
     """
-    if len(size) == 0:
+    if not size:
         size = x.size()
     return torch.arange(size[-1], device=x.device).expand(*size).contiguous()

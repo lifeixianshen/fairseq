@@ -93,7 +93,7 @@ class ConcatDataset(FairseqDataset):
     def prefetch(self, indices):
         frm = 0
         for to, ds in zip(self.cumulative_sizes, self.datasets):
-            real_size = len(ds)
             if getattr(ds, 'supports_prefetch', False):
+                real_size = len(ds)
                 ds.prefetch([(i - frm) % real_size for i in indices if frm <= i < to])
             frm = to

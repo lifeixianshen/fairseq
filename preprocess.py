@@ -30,7 +30,7 @@ def main(args):
     task = tasks.get_task(args.task)
 
     def train_path(lang):
-        return "{}{}".format(args.trainpref, ("." + lang) if lang else "")
+        return "{}{}".format(args.trainpref, f".{lang}" if lang else "")
 
     def file_name(prefix, lang):
         fname = prefix
@@ -104,7 +104,7 @@ def main(args):
             n_seq_tok[1] += worker_result["ntok"]
 
         input_file = "{}{}".format(
-            input_prefix, ("." + lang) if lang is not None else ""
+            input_prefix, f".{lang}" if lang is not None else ""
         )
         offsets = Binarizer.find_offsets(input_file, num_workers)
         pool = None
@@ -235,12 +235,30 @@ def main(args):
                 make_dataset(vocab, testpref, outprefix, lang, num_workers=args.workers)
 
     def make_all_alignments():
-        if args.trainpref and os.path.exists(args.trainpref + "." + args.align_suffix):
-            make_binary_alignment_dataset(args.trainpref + "." + args.align_suffix, "train.align", num_workers=args.workers)
-        if args.validpref and os.path.exists(args.validpref + "." + args.align_suffix):
-            make_binary_alignment_dataset(args.validpref + "." + args.align_suffix, "valid.align", num_workers=args.workers)
-        if args.testpref and os.path.exists(args.testpref + "." + args.align_suffix):
-            make_binary_alignment_dataset(args.testpref + "." + args.align_suffix, "test.align", num_workers=args.workers)
+        if args.trainpref and os.path.exists(
+            f"{args.trainpref}.{args.align_suffix}"
+        ):
+            make_binary_alignment_dataset(
+                f"{args.trainpref}.{args.align_suffix}",
+                "train.align",
+                num_workers=args.workers,
+            )
+        if args.validpref and os.path.exists(
+            f"{args.validpref}.{args.align_suffix}"
+        ):
+            make_binary_alignment_dataset(
+                f"{args.validpref}.{args.align_suffix}",
+                "valid.align",
+                num_workers=args.workers,
+            )
+        if args.testpref and os.path.exists(
+            f"{args.testpref}.{args.align_suffix}"
+        ):
+            make_binary_alignment_dataset(
+                f"{args.testpref}.{args.align_suffix}",
+                "test.align",
+                num_workers=args.workers,
+            )
 
     make_all(args.source_lang, src_dict)
     if target:
@@ -279,7 +297,7 @@ def main(args):
                                     freq_map[srcidx][tgtidx] += 1
 
         align_dict = {}
-        for srcidx in freq_map.keys():
+        for srcidx in freq_map:
             align_dict[srcidx] = max(freq_map[srcidx], key=freq_map[srcidx].get)
 
         with open(
@@ -320,20 +338,20 @@ def binarize_alignments(args, filename, parse_alignment, output_prefix, offset, 
 
 
 def dataset_dest_prefix(args, output_prefix, lang):
-    base = "{}/{}".format(args.destdir, output_prefix)
+    base = f"{args.destdir}/{output_prefix}"
     if lang is not None:
-        lang_part = ".{}-{}.{}".format(args.source_lang, args.target_lang, lang)
+        lang_part = f".{args.source_lang}-{args.target_lang}.{lang}"
     elif args.only_source:
         lang_part = ""
     else:
-        lang_part = ".{}-{}".format(args.source_lang, args.target_lang)
+        lang_part = f".{args.source_lang}-{args.target_lang}"
 
-    return "{}{}".format(base, lang_part)
+    return f"{base}{lang_part}"
 
 
 def dataset_dest_file(args, output_prefix, lang, extension):
     base = dataset_dest_prefix(args, output_prefix, lang)
-    return "{}.{}".format(base, extension)
+    return f"{base}.{extension}"
 
 
 def get_offsets(input_file, num_workers):

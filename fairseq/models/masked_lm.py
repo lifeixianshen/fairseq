@@ -253,7 +253,7 @@ class MaskedLMEncoder(FairseqEncoder):
                 SinusoidalPositionalEmbedding
         ):
             state_dict[
-                name + '.sentence_encoder.embed_positions._float_tensor'
+                f'{name}.sentence_encoder.embed_positions._float_tensor'
             ] = torch.FloatTensor(1)
         if not self.load_softmax:
             for k in list(state_dict.keys()):

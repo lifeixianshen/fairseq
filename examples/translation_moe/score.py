@@ -174,7 +174,7 @@ def intra_ref(refs):
     refs = list(zip(*refs))
     m = len(refs)
     concat_h = []
-    concat_rest = [[] for j in range(m - 1)]
+    concat_rest = [[] for _ in range(m - 1)]
     for i, h in enumerate(refs):
         rest = refs[:i] + refs[i+1:]
         concat_h.append(h)

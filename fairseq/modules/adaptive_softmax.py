@@ -94,16 +94,15 @@ class AdaptiveSoftmax(nn.Module):
             dim = int(self.input_dim // self.factor ** (i + 1))
 
             tied_emb, tied_proj = adaptive_inputs.weights_for_band(i + 1) \
-                if adaptive_inputs is not None else (None, None)
+                    if adaptive_inputs is not None else (None, None)
 
-            if tied_proj is not None:
-                if tie_proj:
-                    proj = TiedLinear(tied_proj, transpose=True)
-                else:
-                    proj = nn.Linear(tied_proj.size(0), tied_proj.size(1), bias=False)
-            else:
+            if tied_proj is None:
                 proj = nn.Linear(self.input_dim, dim, bias=False)
 
+            elif tie_proj:
+                proj = TiedLinear(tied_proj, transpose=True)
+            else:
+                proj = nn.Linear(tied_proj.size(0), tied_proj.size(1), bias=False)
             m = nn.Sequential(
                 proj,
                 nn.Dropout(self.dropout),
@@ -115,7 +114,7 @@ class AdaptiveSoftmax(nn.Module):
             self.tail.append(m)
 
     def upgrade_state_dict_named(self, state_dict, name):
-        version_name = name + '.version'
+        version_name = f'{name}.version'
         if version_name not in state_dict:
             raise Exception('This version of the model is no longer supported')
 

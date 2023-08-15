@@ -32,5 +32,4 @@ class ReplaceDataset(BaseWrapperDataset):
                 src_off = src[offset:] if offset >= 0 else src[:offset]
                 src_off.masked_fill_(src_off == k, v)
 
-        item = srcs if is_tuple else srcs[0]
-        return item
+        return srcs if is_tuple else srcs[0]

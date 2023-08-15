@@ -80,10 +80,7 @@ class DynamicConv1dTBC(nn.Module):
             self.weight_linear = Linear(self.input_size, self.input_size + num_heads * kernel_size * 1)
         else:
             self.weight_linear = Linear(self.query_size, num_heads * kernel_size * 1, bias=bias)
-        if conv_bias:
-            self.conv_bias = nn.Parameter(torch.Tensor(input_size))
-        else:
-            self.conv_bias = None
+        self.conv_bias = nn.Parameter(torch.Tensor(input_size)) if conv_bias else None
         self.reset_parameters()
 
     @property
@@ -229,14 +226,10 @@ class DynamicConv1dTBC(nn.Module):
         return utils.set_incremental_state(self, incremental_state, 'input_buffer', new_buffer)
 
     def extra_repr(self):
-        s = '{}, kernel_size={}, padding_l={}, num_heads={}, weight_softmax={}, conv_bias={}, renorm_padding={}, in_proj={}'.format(
-            self.input_size, self.kernel_size, self.padding_l,
-            self.num_heads, self.weight_softmax, self.conv_bias is not None, self.renorm_padding,
-            self.in_proj,
-        )
+        s = f'{self.input_size}, kernel_size={self.kernel_size}, padding_l={self.padding_l}, num_heads={self.num_heads}, weight_softmax={self.weight_softmax}, conv_bias={self.conv_bias is not None}, renorm_padding={self.renorm_padding}, in_proj={self.in_proj}'
 
         if self.query_size != self.input_size:
-            s += ', query_size={}'.format(self.query_size)
+            s += f', query_size={self.query_size}'
         if self.weight_dropout > 0.:
-            s += ', weight_dropout={}'.format(self.weight_dropout)
+            s += f', weight_dropout={self.weight_dropout}'
         return s

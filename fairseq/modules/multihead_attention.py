@@ -37,7 +37,7 @@ class MultiheadAttention(nn.Module):
         self.encoder_decoder_attention = encoder_decoder_attention
 
         assert not self.self_attention or self.qkv_same_dim, 'Self-attention requires query, key and ' \
-                                                             'value to be of the same size'
+                                                                 'value to be of the same size'
 
         self.k_proj = nn.Linear(self.kdim, embed_dim, bias=bias)
         self.v_proj = nn.Linear(self.vdim, embed_dim, bias=bias)
@@ -58,10 +58,7 @@ class MultiheadAttention(nn.Module):
         self.onnx_trace = False
 
         self.enable_torch_version = False
-        if hasattr(F, "multi_head_attention_forward"):
-            self.enable_torch_version = True
-        else:
-            self.enable_torch_version = False
+        self.enable_torch_version = bool(hasattr(F, "multi_head_attention_forward"))
 
     def prepare_for_onnx_export_(self):
         self.onnx_trace = True
@@ -185,16 +182,10 @@ class MultiheadAttention(nn.Module):
             # saved states are stored with shape (bsz, num_heads, seq_len, head_dim)
             if 'prev_key' in saved_state:
                 prev_key = saved_state['prev_key'].view(bsz * self.num_heads, -1, self.head_dim)
-                if static_kv:
-                    k = prev_key
-                else:
-                    k = torch.cat((prev_key, k), dim=1)
+                k = prev_key if static_kv else torch.cat((prev_key, k), dim=1)
             if 'prev_value' in saved_state:
                 prev_value = saved_state['prev_value'].view(bsz * self.num_heads, -1, self.head_dim)
-                if static_kv:
-                    v = prev_value
-                else:
-                    v = torch.cat((prev_value, v), dim=1)
+                v = prev_value if static_kv else torch.cat((prev_value, v), dim=1)
             key_padding_mask = self._append_prev_key_padding_mask(
                 key_padding_mask=key_padding_mask,
                 prev_key_padding_mask=saved_state.get('prev_key_padding_mask', None),
@@ -333,27 +324,27 @@ class MultiheadAttention(nn.Module):
         return attn_weights
 
     def upgrade_state_dict_named(self, state_dict, name):
-        prefix = name + '.' if name != '' else ''
+        prefix = f'{name}.' if name != '' else ''
         items_to_add = {}
         keys_to_remove = []
         for k in state_dict.keys():
-            if k.endswith(prefix + 'in_proj_weight'):
+            if k.endswith(f'{prefix}in_proj_weight'):
                 # in_proj_weight used to be q + k + v with same dimensions
                 dim = int(state_dict[k].shape[0] / 3)
-                items_to_add[prefix + 'q_proj.weight'] = state_dict[k][:dim]
-                items_to_add[prefix + 'k_proj.weight'] = state_dict[k][dim:2*dim]
-                items_to_add[prefix + 'v_proj.weight'] = state_dict[k][2*dim:]
+                items_to_add[f'{prefix}q_proj.weight'] = state_dict[k][:dim]
+                items_to_add[f'{prefix}k_proj.weight'] = state_dict[k][dim:2*dim]
+                items_to_add[f'{prefix}v_proj.weight'] = state_dict[k][2*dim:]
 
                 keys_to_remove.append(k)
 
-                k_bias = prefix + 'in_proj_bias'
+                k_bias = f'{prefix}in_proj_bias'
                 if k_bias in state_dict.keys():
                     dim = int(state_dict[k].shape[0] / 3)
-                    items_to_add[prefix + 'q_proj.bias'] = state_dict[k_bias][:dim]
-                    items_to_add[prefix + 'k_proj.bias'] = state_dict[k_bias][dim:2*dim]
-                    items_to_add[prefix + 'v_proj.bias'] = state_dict[k_bias][2*dim:]
+                    items_to_add[f'{prefix}q_proj.bias'] = state_dict[k_bias][:dim]
+                    items_to_add[f'{prefix}k_proj.bias'] = state_dict[k_bias][dim:2*dim]
+                    items_to_add[f'{prefix}v_proj.bias'] = state_dict[k_bias][2*dim:]
 
-                    keys_to_remove.append(prefix + 'in_proj_bias')
+                    keys_to_remove.append(f'{prefix}in_proj_bias')
 
         for k in keys_to_remove:
             del state_dict[k]

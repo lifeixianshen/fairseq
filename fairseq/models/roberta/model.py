@@ -114,10 +114,7 @@ class RobertaModel(FairseqLanguageModel):
             prev_inner_dim = self.classification_heads[name].dense.out_features
             if num_classes != prev_num_classes or inner_dim != prev_inner_dim:
                 print(
-                    'WARNING: re-registering head "{}" with num_classes {} (prev: {}) '
-                    'and inner_dim {} (prev: {})'.format(
-                        name, num_classes, prev_num_classes, inner_dim, prev_inner_dim
-                    )
+                    f'WARNING: re-registering head "{name}" with num_classes {num_classes} (prev: {prev_num_classes}) and inner_dim {inner_dim} (prev: {prev_inner_dim})'
                 )
         self.classification_heads[name] = RobertaClassificationHead(
             self.args.encoder_embed_dim,
@@ -148,39 +145,40 @@ class RobertaModel(FairseqLanguageModel):
     def upgrade_state_dict_named(self, state_dict, name):
         super().upgrade_state_dict_named(state_dict, name)
 
-        prefix = name + '.' if name != '' else ''
+        prefix = f'{name}.' if name != '' else ''
         current_head_names = [] if not hasattr(self, 'classification_heads') else \
-            self.classification_heads.keys()
+                self.classification_heads.keys()
 
         # Handle new classification heads present in the state dict.
         keys_to_delete = []
         for k in state_dict.keys():
-            if not k.startswith(prefix + 'classification_heads.'):
+            if not k.startswith(f'{prefix}classification_heads.'):
                 continue
 
-            head_name = k[len(prefix + 'classification_heads.'):].split('.')[0]
-            num_classes = state_dict[prefix + 'classification_heads.' + head_name + '.out_proj.weight'].size(0)
-            inner_dim = state_dict[prefix + 'classification_heads.' + head_name + '.dense.weight'].size(0)
+            head_name = k[len(f'{prefix}classification_heads.'):].split('.')[0]
+            num_classes = state_dict[
+                f'{prefix}classification_heads.{head_name}.out_proj.weight'
+            ].size(0)
+            inner_dim = state_dict[
+                f'{prefix}classification_heads.{head_name}.dense.weight'
+            ].size(0)
 
             if getattr(self.args, 'load_checkpoint_heads', False):
                 if head_name not in current_head_names:
                     self.register_classification_head(head_name, num_classes, inner_dim)
-            else:
-                if head_name not in current_head_names:
-                    print(
-                        'WARNING: deleting classification head ({}) from checkpoint '
-                        'not present in current model: {}'.format(head_name, k)
-                    )
-                    keys_to_delete.append(k)
-                elif (
+            elif head_name not in current_head_names:
+                print(
+                    f'WARNING: deleting classification head ({head_name}) from checkpoint not present in current model: {k}'
+                )
+                keys_to_delete.append(k)
+            elif (
                     num_classes != self.classification_heads[head_name].out_proj.out_features
                     or inner_dim != self.classification_heads[head_name].dense.out_features
                 ):
-                    print(
-                        'WARNING: deleting classification head ({}) from checkpoint '
-                        'with different dimensions than current model: {}'.format(head_name, k)
-                    )
-                    keys_to_delete.append(k)
+                print(
+                    f'WARNING: deleting classification head ({head_name}) from checkpoint with different dimensions than current model: {k}'
+                )
+                keys_to_delete.append(k)
         for k in keys_to_delete:
             del state_dict[k]
 
@@ -189,9 +187,9 @@ class RobertaModel(FairseqLanguageModel):
         if hasattr(self, 'classification_heads'):
             cur_state = self.classification_heads.state_dict()
             for k, v in cur_state.items():
-                if prefix + 'classification_heads.' + k not in state_dict:
-                    print('Overwriting', prefix + 'classification_heads.' + k)
-                    state_dict[prefix + 'classification_heads.' + k] = v
+                if f'{prefix}classification_heads.{k}' not in state_dict:
+                    print('Overwriting', f'{prefix}classification_heads.{k}')
+                    state_dict[f'{prefix}classification_heads.{k}'] = v
 
 
 @register_model('xlmr')

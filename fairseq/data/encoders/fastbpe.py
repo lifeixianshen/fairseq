@@ -32,4 +32,4 @@ class fastBPE(object):
         return self.bpe.apply([x])[0]
 
     def decode(self, x: str) -> str:
-        return (x + ' ').replace(self.bpe_symbol, '').rstrip()
+        return f'{x} '.replace(self.bpe_symbol, '').rstrip()

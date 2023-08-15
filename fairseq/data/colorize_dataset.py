@@ -18,7 +18,7 @@ class ColorizeDataset(BaseWrapperDataset):
         base_collate = super().collater(samples)
         if len(base_collate) > 0:
             base_collate["net_input"]["colors"] = torch.tensor(
-                list(self.color_getter(self.dataset, s["id"]) for s in samples),
+                [self.color_getter(self.dataset, s["id"]) for s in samples],
                 dtype=torch.long,
             )
         return base_collate

@@ -42,7 +42,7 @@ class TransformerFromPretrainedXLMModel(TransformerModel):
         )
 
     @classmethod
-    def build_model(self, args, task, cls_dictionary=MaskedLMDictionary):
+    def build_model(cls, args, task, cls_dictionary=MaskedLMDictionary):
         assert hasattr(args, "pretrained_xlm_checkpoint"), (
             "You must specify a path for --pretrained-xlm-checkpoint to use "
             "--arch transformer_from_pretrained_xlm"
@@ -88,7 +88,7 @@ def upgrade_state_dict_with_xlm_weights(
             decoder and the pretrained_xlm_checkpoint
     """
     if not os.path.exists(pretrained_xlm_checkpoint):
-        raise IOError("Model file not found: {}".format(pretrained_xlm_checkpoint))
+        raise IOError(f"Model file not found: {pretrained_xlm_checkpoint}")
 
     state = checkpoint_utils.load_checkpoint_to_cpu(pretrained_xlm_checkpoint)
     xlm_state_dict = state["model"]
@@ -97,14 +97,9 @@ def upgrade_state_dict_with_xlm_weights(
         for search_key in ["embed_tokens", "embed_positions", "layers"]:
             if search_key in key:
                 subkey = key[key.find(search_key):]
-                assert subkey in state_dict, (
-                    "{} Transformer encoder / decoder "
-                    "state_dict does not contain {}. Cannot "
-                    "load {} from pretrained XLM checkpoint "
-                    "{} into Transformer.".format(
-                        str(state_dict.keys()),
-                        subkey, key, pretrained_xlm_checkpoint)
-                    )
+                assert (
+                    subkey in state_dict
+                ), f"{str(state_dict.keys())} Transformer encoder / decoder state_dict does not contain {subkey}. Cannot load {key} from pretrained XLM checkpoint {pretrained_xlm_checkpoint} into Transformer."
 
                 state_dict[subkey] = xlm_state_dict[key]
     return state_dict

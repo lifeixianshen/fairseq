@@ -39,11 +39,7 @@ def score_target_hypo(args, a, b, c, lenpen, target_outfile, hypo_outfile, write
             # length is measured in terms of words, not bpe tokens, since models may not share the same bpe
             target_len = len(bitext1.rescore_hypo[i].split())
 
-            if lm_res is not None:
-                lm_score = lm_res.score[i]
-            else:
-                lm_score = 0
-
+            lm_score = lm_res.score[i] if lm_res is not None else 0
             if bitext2 is not None:
                 bitext2_score = bitext2.rescore_score[i]
                 bitext2_backwards = bitext2.backwards
@@ -61,7 +57,7 @@ def score_target_hypo(args, a, b, c, lenpen, target_outfile, hypo_outfile, write
                 best_score = score
                 best_hypo = bitext1.rescore_hypo[i]
 
-            if j == gen_output.num_hypos[i] or j == args.num_rescore:
+            if j in [gen_output.num_hypos[i], args.num_rescore]:
                 j = 1
                 hypo_lst.append(best_hypo)
                 score_lst.append(best_score)
@@ -77,20 +73,15 @@ def score_target_hypo(args, a, b, c, lenpen, target_outfile, hypo_outfile, write
 
         for key in range(len(gen_keys)):
             if args.prefix_len is None:
-                assert hypo_lst[key] in gen_output.no_bpe_hypo[gen_keys[key]], (
-                    "pred and rescore hypo mismatch: i: " + str(key) + ", "
-                    + str(hypo_lst[key]) + str(gen_keys[key])
-                    + str(gen_output.no_bpe_hypo[key])
-                )
+                assert (
+                    hypo_lst[key] in gen_output.no_bpe_hypo[gen_keys[key]]
+                ), f"pred and rescore hypo mismatch: i: {str(key)}, {str(hypo_lst[key])}{str(gen_keys[key])}{str(gen_output.no_bpe_hypo[key])}"
                 sys_tok = dict.encode_line(hypo_lst[key])
-                ref_tok = dict.encode_line(gen_output.no_bpe_target[gen_keys[key]])
-                scorer.add(ref_tok, sys_tok)
-
             else:
                 full_hypo = rerank_utils.get_full_from_prefix(hypo_lst[key], gen_output.no_bpe_hypo[gen_keys[key]])
                 sys_tok = dict.encode_line(full_hypo)
-                ref_tok = dict.encode_line(gen_output.no_bpe_target[gen_keys[key]])
-                scorer.add(ref_tok, sys_tok)
+            ref_tok = dict.encode_line(gen_output.no_bpe_target[gen_keys[key]])
+            scorer.add(ref_tok, sys_tok)
 
         # if only one set of hyper parameters is provided, write the predictions to a file
         if write_hypos:
@@ -100,12 +91,10 @@ def score_target_hypo(args, a, b, c, lenpen, target_outfile, hypo_outfile, write
                     assert hypo_lst[key] in gen_output.no_bpe_hypo[gen_keys[key]], \
                         "pred and rescore hypo mismatch:"+"i:"+str(key)+str(hypo_lst[key]) + str(gen_output.no_bpe_hypo[key])
                     ordered_hypos[gen_keys[key]] = hypo_lst[key]
-                    ordered_targets[gen_keys[key]] = gen_output.no_bpe_target[gen_keys[key]]
-
                 else:
                     full_hypo = rerank_utils.get_full_from_prefix(hypo_lst[key], gen_output.no_bpe_hypo[gen_keys[key]])
                     ordered_hypos[gen_keys[key]] = full_hypo
-                    ordered_targets[gen_keys[key]] = gen_output.no_bpe_target[gen_keys[key]]
+                ordered_targets[gen_keys[key]] = gen_output.no_bpe_target[gen_keys[key]]
 
     # write the hypos in the original order from nbest list generation
     if args.num_shards == (len(bitext1_lst)):
@@ -137,19 +126,17 @@ def match_target_hypo(args, target_outfile, hypo_outfile):
                                         args.lenpen[i], target_outfile, hypo_outfile,
                                         False, args.normalize) for i in range(len(args.weight1))])
 
-    if len(rerank_scores) > 1:
-        best_index = np.argmax(rerank_scores)
-        best_score = rerank_scores[best_index]
-        print("best score", best_score)
-        print("best lenpen", args.lenpen[best_index])
-        print("best weight1", args.weight1[best_index])
-        print("best weight2", args.weight2[best_index])
-        print("best weight3", args.weight3[best_index])
-        return args.lenpen[best_index], args.weight1[best_index], \
-            args.weight2[best_index], args.weight3[best_index], best_score
-
-    else:
+    if len(rerank_scores) <= 1:
         return args.lenpen[0], args.weight1[0], args.weight2[0], args.weight3[0], rerank_scores[0]
+    best_index = np.argmax(rerank_scores)
+    best_score = rerank_scores[best_index]
+    print("best score", best_score)
+    print("best lenpen", args.lenpen[best_index])
+    print("best weight1", args.weight1[best_index])
+    print("best weight2", args.weight2[best_index])
+    print("best weight3", args.weight3[best_index])
+    return args.lenpen[best_index], args.weight1[best_index], \
+        args.weight2[best_index], args.weight3[best_index], best_score
 
 
 def load_score_files(args):
@@ -187,7 +174,7 @@ def load_score_files(args):
             lm_score_file = rerank_utils.rescore_file_name(pre_gen, args.prefix_len, args.lm_name, lm_file=True)
 
         # get gen output
-        predictions_bpe_file = pre_gen+"/generate_output_bpe.txt"
+        predictions_bpe_file = f"{pre_gen}/generate_output_bpe.txt"
         if using_nbest:
             print("Using predefined n-best list from interactive.py")
             predictions_bpe_file = args.nbest_list
@@ -202,25 +189,24 @@ def load_score_files(args):
                                                 args.remove_bpe, args.prefix_len, args.target_prefix_frac,
                                                 args.source_prefix_frac)
 
-        if args.score_model2 is not None or args.nbest_list is not None:
-            if rerank2_is_gen:
-                bitext2 = gen_output
-            else:
-                bitext2 = rerank_utils.BitextOutput(score2_file, args.backwards2, args.right_to_left2,
-                                                    args.remove_bpe, args.prefix_len, args.target_prefix_frac,
-                                                    args.source_prefix_frac)
-
-                assert bitext2.source_lengths == bitext1.source_lengths, \
-                    "source lengths for rescoring models do not match"
-                assert bitext2.target_lengths == bitext1.target_lengths, \
-                    "target lengths for rescoring models do not match"
-        else:
+        if args.score_model2 is None and args.nbest_list is None:
             if args.diff_bpe:
                 assert args.score_model2 is None
                 bitext2 = gen_output
             else:
                 bitext2 = None
 
+        elif rerank2_is_gen:
+            bitext2 = gen_output
+        else:
+            bitext2 = rerank_utils.BitextOutput(score2_file, args.backwards2, args.right_to_left2,
+                                                args.remove_bpe, args.prefix_len, args.target_prefix_frac,
+                                                args.source_prefix_frac)
+
+            assert bitext2.source_lengths == bitext1.source_lengths, \
+                "source lengths for rescoring models do not match"
+            assert bitext2.target_lengths == bitext1.target_lengths, \
+                "target lengths for rescoring models do not match"
         if args.language_model is not None:
             lm_res1 = rerank_utils.LMOutput(lm_score_file, args.lm_dict, args.prefix_len,
                                             args.remove_bpe, args.target_prefix_frac)
@@ -259,11 +245,11 @@ def rerank(args):
         rerank_score_lm.score_lm(args)
 
         if args.write_hypos is None:
-            write_targets = pre_gen+"/matched_targets"
-            write_hypos = pre_gen+"/matched_hypos"
+            write_targets = f"{pre_gen}/matched_targets"
+            write_hypos = f"{pre_gen}/matched_hypos"
         else:
-            write_targets = args.write_hypos+"_targets" + args.gen_subset
-            write_hypos = args.write_hypos+"_hypos" + args.gen_subset
+            write_targets = f"{args.write_hypos}_targets{args.gen_subset}"
+            write_hypos = f"{args.write_hypos}_hypos{args.gen_subset}"
 
     if args.all_shards:
         write_targets += "_all_shards"

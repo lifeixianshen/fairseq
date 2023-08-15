@@ -24,9 +24,7 @@ class SubsampleDataset(BaseWrapperDataset):
             list(range(len(self.dataset))), self.actual_size, replace=False
         )
         print(
-            "subsampled dataset from {} to {} (ratio={})".format(
-                len(self.dataset), self.actual_size, size_ratio
-            )
+            f"subsampled dataset from {len(self.dataset)} to {self.actual_size} (ratio={size_ratio})"
         )
 
     def __getitem__(self, index):

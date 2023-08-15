@@ -47,12 +47,9 @@ class TransformEosDataset(FairseqDataset):
         self.remove_eos_from_tgt = remove_eos_from_tgt
         self.has_target = has_target
 
-        # precompute how we should adjust the reported sizes
-        self._src_delta = 0
-        self._src_delta += 1 if append_eos_to_src else 0
+        self._src_delta = 0 + (1 if append_eos_to_src else 0)
         self._src_delta -= 1 if remove_eos_from_src else 0
-        self._tgt_delta = 0
-        self._tgt_delta += 1 if append_eos_to_tgt else 0
+        self._tgt_delta = 0 + (1 if append_eos_to_tgt else 0)
         self._tgt_delta -= 1 if remove_eos_from_tgt else 0
 
         self._checked_src = False
@@ -98,11 +95,10 @@ class TransformEosDataset(FairseqDataset):
         return self.dataset.num_tokens(index)
 
     def size(self, index):
-        if self.has_target:
-            src_len, tgt_len = self.dataset.size(index)
-            return (src_len + self._src_delta, tgt_len + self._tgt_delta)
-        else:
+        if not self.has_target:
             return self.dataset.size(index)
+        src_len, tgt_len = self.dataset.size(index)
+        return (src_len + self._src_delta, tgt_len + self._tgt_delta)
 
     def ordered_indices(self):
         # NOTE: we assume that the ordering does not change based on the

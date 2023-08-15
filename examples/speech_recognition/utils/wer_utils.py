@@ -62,10 +62,7 @@ def trimWhitespace(str):
 
 def str2toks(str):
     pieces = trimWhitespace(str).split(" ")
-    toks = []
-    for p in pieces:
-        toks.append(Token(p, 0.0, 0.0))
-    return toks
+    return [Token(p, 0.0, 0.0) for p in pieces]
 
 
 class EditDistance(object):
@@ -87,13 +84,12 @@ class EditDistance(object):
                 return ref.end - ref.start
             else:  # substitution
                 return abs(ref.start - hyp.start) + abs(ref.end - hyp.end) + 0.1
-        else:
-            if code == Code.match:
-                return 0
-            elif code == Code.insertion or code == Code.deletion:
-                return 3
-            else:  # substitution
-                return 4
+        elif code == Code.match:
+            return 0
+        elif code in [Code.insertion, Code.deletion]:
+            return 3
+        else:  # substitution
+            return 4
 
     def get_result(self, refs, hyps):
         res = AlignmentResult(refs=deque(), hyps=deque(), codes=deque(), score=np.nan)
@@ -128,7 +124,7 @@ class EditDistance(object):
                 else:
                     res.codes.appendleft(Code.substitution)
 
-                    confusion_pair = "%s -> %s" % (ref_str, hyp_str)
+                    confusion_pair = f"{ref_str} -> {hyp_str}"
                     if confusion_pair not in self.confusion_pairs_:
                         self.confusion_pairs_[confusion_pair] = 1
                     else:
@@ -152,12 +148,12 @@ class EditDistance(object):
 
         for i in range(num_rows):
             for j in range(num_cols):
-                if i == 0 and j == 0:
-                    self.scores_[i, j] = 0.0
-                    self.backtraces_[i, j] = 0
-                    continue
-
                 if i == 0:
+                    if j == 0:
+                        self.scores_[i, j] = 0.0
+                        self.backtraces_[i, j] = 0
+                        continue
+
                     self.scores_[i, j] = self.scores_[i, j - 1] + self.cost(
                         None, hyps[j - 1], Code.insertion
                     )
@@ -215,7 +211,7 @@ class WERTransformer(object):
         self.process(["dummy_str", hyp_str, ref_str])
 
         if verbose:
-            print("'%s' vs '%s'" % (hyp_str, ref_str))
+            print(f"'{hyp_str}' vs '{ref_str}'")
             self.report_result()
 
     def process(self, input):  # std::vector<std::string>&& input
@@ -318,37 +314,35 @@ class WERTransformer(object):
         )
 
     def wer(self):
-        if self.words_ == 0:
-            wer = np.nan
-        else:
-            wer = (
+        return (
+            np.nan
+            if self.words_ == 0
+            else (
                 100.0
                 * (self.insertions_ + self.deletions_ + self.substitutions_)
                 / self.words_
             )
-        return wer
+        )
 
     def stats(self):
         if self.words_ == 0:
-            stats = {}
-        else:
-            wer = (
-                100.0
-                * (self.insertions_ + self.deletions_ + self.substitutions_)
-                / self.words_
-            )
-            stats = dict(
-                {
-                    "wer": wer,
-                    "utts": self.utts_,
-                    "numwords": self.words_,
-                    "ins": self.insertions_,
-                    "dels": self.deletions_,
-                    "subs": self.substitutions_,
-                    "confusion_pairs": self.ed_.confusion_pairs_,
-                }
-            )
-        return stats
+            return {}
+        wer = (
+            100.0
+            * (self.insertions_ + self.deletions_ + self.substitutions_)
+            / self.words_
+        )
+        return dict(
+            {
+                "wer": wer,
+                "utts": self.utts_,
+                "numwords": self.words_,
+                "ins": self.insertions_,
+                "dels": self.deletions_,
+                "subs": self.substitutions_,
+                "confusion_pairs": self.ed_.confusion_pairs_,
+            }
+        )
 
 
 def calc_wer(hyp_str, ref_str):
